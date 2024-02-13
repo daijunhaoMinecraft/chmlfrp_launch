@@ -4,12 +4,17 @@ import wx
 import sys
 import os
 import pyperclip3 as pycopy
+#忽略证书警告
 requests.packages.urllib3.disable_warnings()
+#获取当前路径
 pathx = os.path.dirname(os.path.abspath(__file__))
+#请求头
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
 }
+#获取登录信息
 chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={sys.argv[1]}",headers=headers,verify=False).text)
+#用户主界面
 class chmlfrp_user(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -33,12 +38,14 @@ class chmlfrp_user(wx.Panel):
         self.chmlfrp_qq.SetLabel(f"{chmlfrp_user_info['qq']}")
         self.标签3 = wx.StaticText(self,size=(80, 24),pos=(9, 97),label='用户QQ号:',name='staticText',style=2321)
         self.chmlfrp_user_img = wx.StaticBitmap(self,size=(40, 40),pos=(1097, 28),name='staticBitmap',style=33554432)
+        #获取用户头像
         chmlfrp_user_img = requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content
         with open(f"{pathx}\\temp.png",mode="wb") as f:
             f.write(chmlfrp_user_img)
             f.close()
         chmlfrp_user_icon_图片 = wx.Image(f"{pathx}\\temp.png").ConvertToBitmap()
         self.chmlfrp_user_img.SetBitmap(wx.BitmapFromImage(chmlfrp_user_icon_图片))
+        #获取签到状态
         qd = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/qdxx.php?userid={chmlfrp_user_info['userid']}",verify=False,headers=headers).text)
         if qd['is_signed_in_today'] == True:
             qd_info = f"今天已经签到了\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
@@ -47,6 +54,7 @@ class chmlfrp_user(wx.Panel):
         self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户创建隧道的数量:{chmlfrp_user_info["tunnel"]}\n当前用户宽带限制(国内):{chmlfrp_user_info["bandwidth"]}\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n{qd_info}',name='text',style=1073741872)
         self.标签4 = wx.StaticText(self,size=(191, 24),pos=(7, 414),label='userinfo返回json(小白请无视):',name='staticText',style=17)
         self.debug_json_user_info = wx.TextCtrl(self,size=(366, 201),pos=(7, 447),value=f'{chmlfrp_user_info}',name='text',style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_AUTO_URL)
+#启动隧道
 class chmlfrp_start_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -64,6 +72,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
         self.flushed_usertunnel.Bind(wx.EVT_BUTTON, self.flushed_usertunnel_按钮被单击)
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}",headers=headers,verify=False).text)
         try:
+            #获取用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
                     self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
@@ -72,6 +81,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
         except KeyError:
             pass
     def usertunnel_list_表项被双击(self, event):
+        #获取隧道配置
         global usertunnel_info_config_frpc
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         self.start_usertunnel.Enable()
@@ -79,6 +89,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
         self.frpc_config.SetLabel(usertunnel_info_config_frpc)
 
     def start_usertunnel_按钮被单击(self, event):
+        #启动隧道
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         with open(f"{pathx}\\frpc.ini",mode="w",encoding="utf-8") as f:
             f.write(usertunnel_info_config_frpc)
@@ -92,6 +103,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
                 pass
 
     def flushed_usertunnel_按钮被单击(self, event):
+        #刷新隧道
         self.usertunnel_list.Clear()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         try:
@@ -107,7 +119,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成", style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
-
+#删除隧道
 class chmlfrp_delete_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -126,6 +138,7 @@ class chmlfrp_delete_usertunnel(wx.Panel):
         self.flushed_usertunnel.Bind(wx.EVT_BUTTON, self.flushed_usertunnel_按钮被单击)
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}",headers=headers,verify=False).text)
         try:
+            #获取当前用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
                     self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
@@ -134,17 +147,20 @@ class chmlfrp_delete_usertunnel(wx.Panel):
         except KeyError:
             pass
     def usertunnel_list_表项被双击(self, event):
+        #获取隧道配置
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         self.delete_usertunnel.Enable()
         usertunnel_info_config_frpc = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={sys.argv[1]}&node={usertunnel_info[self.usertunnel_list.GetSelection()]['node']}").text)['message']
         self.frpc_config.SetLabel(usertunnel_info_config_frpc)
 
     def delete_usertunnel_按钮被单击(self, event):
+        #删除隧道
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         delete_warm = wx.MessageDialog(None, caption="警告", message="你确定要删除此隧道吗?",style=wx.YES_NO | wx.ICON_WARNING)
         if delete_warm.ShowModal() == wx.ID_YES:
             delete_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/deletetl.php?token={sys.argv[1]}&nodeid={usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&userid={str(chmlfrp_user_info['userid'])}",headers=headers,verify=False).text)
             self.usertunnel_list.Clear()
+            #再次获取隧道,避免删除的隧道重复删除
             usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
             try:
                 for i in range(len(usertunnel_info)):
@@ -161,6 +177,7 @@ class chmlfrp_delete_usertunnel(wx.Panel):
                 pass
 
     def flushed_usertunnel_按钮被单击(self, event):
+        #刷新隧道
         self.usertunnel_list.Clear()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         try:
@@ -176,7 +193,7 @@ class chmlfrp_delete_usertunnel(wx.Panel):
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成", style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
-
+#创建隧道
 class chmlfrp_create_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -204,6 +221,7 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.create_usertunnel.SetFont(create_usertunnel_字体)
         self.create_usertunnel.Bind(wx.EVT_BUTTON, self.create_usertunnel_按钮被单击)
         self.create_usertunnel.Disable()
+        #获取节点
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
@@ -236,6 +254,7 @@ class chmlfrp_create_usertunnel(wx.Panel):
         elif self.tcp_udp.GetSelection() == 1:
             usertunnel_type = "udp"
         try:
+            #创建隧道请求内容
             data = {
                 "ap": f"{self.ap.GetValue()}",
                 "choose": "",
@@ -255,16 +274,19 @@ class chmlfrp_create_usertunnel(wx.Panel):
             user_create_Error = wx.MessageDialog(None, caption="Error", message=f"创建失败,原因可能出现在外网端口上,错误信息:{e}",style=wx.OK | wx.ICON_ERROR)
             if user_create_Error.ShowModal() == wx.ID_OK:
                 pass
+        #创建隧道请求头
         headers1 = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
             "Accept": "application/json, text/plain, */*",
             "HTTP_TOKEN": f"{sys.argv[1]}"
         }
+        #创建隧道post请求
         create_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/tunnel.php",json=data,headers=headers1,verify=False).text)
+        #返回创建状态
         user_create_info_message = wx.MessageDialog(None, caption="info",message=f"{create_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_create_info_message.ShowModal() == wx.ID_OK:
             pass
-
+#修改隧道
 class chmlfrp_revise_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -297,6 +319,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.revise_usertunnel.Disable()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         try:
+            #获取当前用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
                     self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
@@ -304,6 +327,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
                     self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
         except KeyError:
             pass
+        #获取节点列表
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
@@ -319,6 +343,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
 
 
     def 列表框1_表项被双击(self,event):
+        #获取用户选中的隧道信息
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         self.列表框2.Enable()
         self.多选框3.Enable()
@@ -360,6 +385,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             node = usertunnel_info[self.列表框1.GetSelection()]['node']
         elif self.多选框3.GetValue() == False:
             node = usertunnel_info[self.列表框2.GetSelection()]['node']
+        #修改隧道请求内容
         data1 = {
             "ap": " ",
             "compression": f"{compression}",
@@ -374,12 +400,15 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             "userid": int(chmlfrp_user_info["userid"]),
             "usertoken": f"{sys.argv[1]}"
         }
+        #修改隧道请求头
         headers1 = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
             "Accept": "application/json, text/plain, */*",
             "HTTP_TOKEN": f"{sys.argv[1]}"
         }
+        #修改隧道请求post
         revise_usertunnel_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/cztunnel.php",headers=headers1,json=data1,verify=False).text)
+        #返回状态
         user_revise_info_message = wx.MessageDialog(None, caption="info", message=f"{revise_usertunnel_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_revise_info_message.ShowModal() == wx.ID_OK:
             pass
@@ -390,6 +419,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         elif self.多选框3.GetValue() == False:
             self.列表框2.Enable()
     def 按钮2_按钮被单击(self,event):
+        #刷新隧道
         self.列表框1.Clear()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         try:
@@ -405,7 +435,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成", style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
-
+#关于
 class chmlfrp_about(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -415,7 +445,7 @@ class chmlfrp_about(wx.Panel):
 
 
 
-
+#选项卡创建
 class MyNotebook(wx.Notebook):
     def __init__(self, parent):
         wx.Notebook.__init__(self, parent, id=wx.ID_ANY, style=wx.BK_DEFAULT)
