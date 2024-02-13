@@ -5,18 +5,21 @@ import requests
 import wx
 import winreg
 
+#关闭证书警告
 requests.packages.urllib3.disable_warnings()
+#获取当前路径
 pathx = os.path.dirname(os.path.abspath(__file__))
+#请求头
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
 }
-
+#获取文档路径
 def Personal():
     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders')
     path = winreg.QueryValueEx(key, "Personal")[0]
     return path
 
-
+#创建图形化界面
 class Frame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, title='chmlfrp', size=(1200, 800),name='frame',style=541072384)
@@ -39,6 +42,7 @@ class Frame(wx.Frame):
         self.user_token.Bind(wx.EVT_RADIOBUTTON,self.user_token_状态被改变)
         self.chmlfrp_token = wx.TextCtrl(self.启动窗口,size=(250, 22),pos=(464, 348),value='',name='text',style=wx.TE_PASSWORD)
         self.chmlfrp_token.Disable()
+        #读取账号密码(或token)如果没有,则跳过
         try:
             with open(f"{Personal()}\\chmlfrp_user_password.json",mode="r",encoding="utf-8") as f:
                 chmlfrp_user_password = json.loads(f.read())
@@ -57,6 +61,7 @@ class Frame(wx.Frame):
 
 
     def 按钮1_按钮被单击(self,event):
+        #当用户选择使用账号密码登录
         if self.user_password.GetValue() == True:
             user_password_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/login.php?username={self.chmlfrp_user.GetValue()}&password={self.chmlfrp_password.GetValue()}",headers=headers,verify=False).text)
             try:
@@ -74,6 +79,7 @@ class Frame(wx.Frame):
                 user_password_login_Error = wx.MessageDialog(None, caption="Error", message=f"{user_password_info['error']}",style=wx.OK | wx.ICON_ERROR)
                 if user_password_login_Error.ShowModal() == wx.ID_OK:
                     pass
+        #当用户选择使用token登录
         elif self.user_token.GetValue() == True:
             user_token_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={self.chmlfrp_token.GetValue()}",headers=headers,verify=False).text)
             try:
