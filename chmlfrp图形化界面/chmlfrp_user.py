@@ -221,6 +221,8 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.create_usertunnel.SetFont(create_usertunnel_字体)
         self.create_usertunnel.Bind(wx.EVT_BUTTON, self.create_usertunnel_按钮被单击)
         self.create_usertunnel.Disable()
+        self.按钮2 = wx.Button(self, size=(80, 32), pos=(1050, 325), label='刷新节点', name='button')
+        self.按钮2.Bind(wx.EVT_BUTTON, self.按钮2_按钮被单击)
         #获取节点
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
@@ -286,6 +288,27 @@ class chmlfrp_create_usertunnel(wx.Panel):
         user_create_info_message = wx.MessageDialog(None, caption="info",message=f"{create_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_create_info_message.ShowModal() == wx.ID_OK:
             pass
+
+    def 按钮2_按钮被单击(self, event):
+        self.列表框1.Clear()
+        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        try:
+            for i in range(len(unode)):
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
+                    self.列表框1.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
+                    self.列表框1.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
+                    self.列表框1.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
+                    self.列表框1.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+        except Exception:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
+            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
+                pass
+        flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
+        if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
+            pass
 #修改隧道
 class chmlfrp_revise_usertunnel(wx.Panel):
     def __init__(self, parent):
@@ -315,6 +338,8 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.多选框3.Bind(wx.EVT_CHECKBOX,self.多选框3_狀态被改变)
         self.按钮2 = wx.Button(self,size=(80, 32),pos=(1048, 264),label='刷新隧道',name='button')
         self.按钮2.Bind(wx.EVT_BUTTON,self.按钮2_按钮被单击)
+        self.按钮3 = wx.Button(self, size=(80, 32), pos=(1048, 523), label='刷新隧道', name='button')
+        self.按钮3.Bind(wx.EVT_BUTTON, self.按钮3_按钮被单击)
         self.列表框2.Disable()
         self.revise_usertunnel.Disable()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
@@ -433,6 +458,27 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
                 pass
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成", style=wx.OK | wx.ICON_INFORMATION)
+        if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
+            pass
+
+    def 按钮3_按钮被单击(self,event):
+        self.列表框2.Clear()
+        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        try:
+            for i in range(len(unode)):
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
+                    self.列表框2.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
+                    self.列表框2.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
+                    self.列表框2.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
+                    self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+        except Exception:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
+            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
+                pass
+        flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
 #关于
