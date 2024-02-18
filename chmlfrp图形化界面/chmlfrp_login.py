@@ -4,6 +4,7 @@ import os
 import requests
 import wx
 import winreg
+import wx.adv
 
 #关闭证书警告
 requests.packages.urllib3.disable_warnings()
@@ -41,6 +42,8 @@ class Frame(wx.Frame):
         self.user_token = wx.RadioButton(self.启动窗口,size=(117, 24),pos=(722, 348),name='radioButton',label='使用token登录')
         self.user_token.Bind(wx.EVT_RADIOBUTTON,self.user_token_状态被改变)
         self.chmlfrp_token = wx.TextCtrl(self.启动窗口,size=(250, 22),pos=(464, 348),value='',name='text',style=wx.TE_PASSWORD)
+        self.超级链接框1 = wx.adv.HyperlinkCtrl(self.启动窗口, size=(148, 22), pos=(18, 15), name='hyperlink',label='免费注册一个chmlfrp账号', url='panel.chmlfrp.cn/register',style=1)
+        self.标签5 = wx.StaticText(self.启动窗口, size=(148, 22), pos=(18, 44), label='token指的是用户密钥',name='staticText', style=17)
         self.chmlfrp_token.Disable()
         #读取账号密码(或token)如果没有,则跳过
         try:
