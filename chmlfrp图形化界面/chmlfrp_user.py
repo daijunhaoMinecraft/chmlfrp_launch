@@ -4,6 +4,7 @@ import wx
 import sys
 import os
 import pyperclip3 as pycopy
+import winreg
 #忽略证书警告
 requests.packages.urllib3.disable_warnings()
 #获取当前路径
@@ -12,6 +13,11 @@ pathx = os.path.dirname(os.path.abspath(__file__))
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
 }
+#获取当前计算机文档路径
+def Personal():
+    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders')
+    path = winreg.QueryValueEx(key, "Personal")[0]
+    return path
 #获取登录信息
 chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={sys.argv[1]}",headers=headers,verify=False).text)
 #用户主界面
@@ -54,6 +60,24 @@ class chmlfrp_user(wx.Panel):
         self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户创建隧道的数量:{chmlfrp_user_info["tunnel"]}\n当前用户宽带限制(国内):{chmlfrp_user_info["bandwidth"]}\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n{qd_info}',name='text',style=1073741872)
         self.标签4 = wx.StaticText(self,size=(191, 24),pos=(7, 414),label='userinfo返回json(小白请无视):',name='staticText',style=17)
         self.debug_json_user_info = wx.TextCtrl(self,size=(366, 201),pos=(7, 447),value=f'{chmlfrp_user_info}',name='text',style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_AUTO_URL)
+        self.resusertoken = wx.Button(self, size=(80, 32), pos=(7, 664), label='重置token', name='button')
+        self.resusertoken.SetForegroundColour((255, 0, 0, 255))
+        self.resusertoken.Bind(wx.EVT_BUTTON, self.resusertoken_按钮被单击)
+
+    #重置用户token
+    def resusertoken_按钮被单击(self, event):
+        resusertoken_warm = wx.MessageDialog(None, caption="警告", message="你确定要重置token吗?",style=wx.YES_NO | wx.ICON_WARNING)
+        if resusertoken_warm.ShowModal() == wx.ID_YES:
+            resusertoken_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/resusertoken.php?usertoken={sys.argv[1]}",headers=headers,verify=False).text)
+            with open(f"{Personal()}\\chmlfrp_token.json", mode="w", encoding="utf-8") as f:
+                data = {
+                    "token": f"{resusertoken_info['newToken']}"
+                }
+                f.write(json.dumps(data, indent=4, ensure_ascii=False))
+                f.close()
+            resusertoken_ok = wx.MessageDialog(None, caption="info", message=f"用户token重置完成,自动登录token已刷新,请重新打开程序,点击OK则程序退出\n新的token:{resusertoken_info['newToken']}",style=wx.OK | wx.ICON_INFORMATION)
+            if resusertoken_ok.ShowModal() == wx.ID_OK:
+                sys.exit()
 #启动隧道
 class chmlfrp_start_usertunnel(wx.Panel):
     def __init__(self, parent):
