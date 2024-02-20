@@ -57,12 +57,22 @@ class chmlfrp_user(wx.Panel):
             qd_info = f"今天已经签到了\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
         if qd['is_signed_in_today'] == False:
             qd_info = f"今天还未签到\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
-        self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户创建隧道的数量:{chmlfrp_user_info["tunnel"]}\n当前用户宽带限制(国内):{chmlfrp_user_info["bandwidth"]}\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n{qd_info}',name='text',style=1073741872)
+        self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户创建隧道的数量:{chmlfrp_user_info["tunnel"]}\n当前用户宽带限制(国内):{chmlfrp_user_info["bandwidth"]}\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n当前用户积分数:{str(chmlfrp_user_info["integral"])}\n{qd_info}',name='text',style=1073741872)
         self.标签4 = wx.StaticText(self,size=(191, 24),pos=(7, 414),label='userinfo返回json(小白请无视):',name='staticText',style=17)
         self.debug_json_user_info = wx.TextCtrl(self,size=(366, 201),pos=(7, 447),value=f'{chmlfrp_user_info}',name='text',style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_AUTO_URL)
         self.resusertoken = wx.Button(self, size=(80, 32), pos=(7, 664), label='重置token', name='button')
         self.resusertoken.SetForegroundColour((255, 0, 0, 255))
         self.resusertoken.Bind(wx.EVT_BUTTON, self.resusertoken_按钮被单击)
+        self.标签5 = wx.StaticText(self, size=(106, 24), pos=(405, 22), label='当前登录用户token:',name='staticText', style=0)
+        self.编辑框6 = wx.TextCtrl(self, size=(305, 22), pos=(521, 21), value='', name='text', style=wx.TE_PASSWORD | wx.TE_READONLY)
+        self.编辑框6_show = wx.TextCtrl(self, size=(305, 22), pos=(521, 21), value='', name='text', style=wx.TE_READONLY)
+        self.编辑框6.SetLabel(f"{sys.argv[1]}")
+        self.编辑框6_show.SetLabel(f"{sys.argv[1]}")
+        self.编辑框6_show.Hide()
+        self.copy_token = wx.Button(self, size=(80, 32), pos=(931, 17), label='复制token', name='button')
+        self.copy_token.Bind(wx.EVT_BUTTON, self.copy_token_按钮被单击)
+        self.display_token = wx.CheckBox(self, size=(84, 24), pos=(838, 20), name='check', label='显示token',style=16384)
+        self.display_token.Bind(wx.EVT_CHECKBOX, self.display_token_狀态被改变)
 
     #重置用户token
     def resusertoken_按钮被单击(self, event):
@@ -78,11 +88,33 @@ class chmlfrp_user(wx.Panel):
             resusertoken_ok = wx.MessageDialog(None, caption="info", message=f"用户token重置完成,自动登录token已刷新,请重新打开程序,点击OK则程序退出\n新的token:{resusertoken_info['newToken']}",style=wx.OK | wx.ICON_INFORMATION)
             if resusertoken_ok.ShowModal() == wx.ID_OK:
                 sys.exit()
+
+    def display_token_狀态被改变(self,event):
+        if self.display_token.GetValue() == True:
+            self.display_token.SetValue(False)
+            chmlfrp_display_token_warm = wx.MessageDialog(None, caption="警告",message="你确定要显示token?\n请不要随意将token发送给任何人!",style=wx.YES_NO | wx.ICON_WARNING)
+            if chmlfrp_display_token_warm.ShowModal() == wx.ID_YES:
+                self.display_token.SetValue(True)
+                self.编辑框6.Hide()
+                self.编辑框6_show.Show()
+            else:
+                self.display_token.SetValue(False)
+        elif self.display_token.GetValue() == False:
+            self.编辑框6.Show()
+            self.编辑框6_show.Hide()
+
+
+    def copy_token_按钮被单击(self,event):
+        pycopy.copy(f"{sys.argv[1]}")
+        chmlfrp_token_copy_ok = wx.MessageDialog(None, caption="信息", message="token复制成功\n请不要随意发给任何人!",style=wx.OK | wx.ICON_INFORMATION)
+        if chmlfrp_token_copy_ok.ShowModal() == wx.ID_OK:
+            pass
+
 #启动隧道
 class chmlfrp_start_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
-        self.usertunnel_list = wx.ListBox(self, size=(1113, 312), pos=(15, 41), name='listBox', choices=[],style=32)
+        self.usertunnel_list = wx.ListBox(self, size=(1113, 312), pos=(15, 41), name='listBox', choices=[],style=1073741856)
         self.usertunnel_list.Bind(wx.EVT_LISTBOX_DCLICK, self.usertunnel_list_表项被双击)
         self.标签1 = wx.StaticText(self, size=(141, 24), pos=(15, 13), label='当前隧道列表(双击选择):',name='staticText', style=2321)
         self.frpc_config = wx.TextCtrl(self, size=(396, 339), pos=(107, 381), value='', name='text',style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL)
@@ -99,9 +131,9 @@ class chmlfrp_start_usertunnel(wx.Panel):
             #获取用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             pass
     def usertunnel_list_表项被双击(self, event):
@@ -133,9 +165,9 @@ class chmlfrp_start_usertunnel(wx.Panel):
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
@@ -147,7 +179,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
 class chmlfrp_delete_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
-        self.usertunnel_list = wx.ListBox(self, size=(1113, 312), pos=(15, 41), name='listBox', choices=[],style=32)
+        self.usertunnel_list = wx.ListBox(self, size=(1113, 312), pos=(15, 41), name='listBox', choices=[],style=1073741856)
         self.usertunnel_list.Bind(wx.EVT_LISTBOX_DCLICK, self.usertunnel_list_表项被双击)
         self.标签1 = wx.StaticText(self, size=(141, 24), pos=(15, 13), label='当前隧道列表(双击选择):',name='staticText', style=2321)
         self.frpc_config = wx.TextCtrl(self, size=(396, 339), pos=(107, 381), value='', name='text',style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_AUTO_URL)
@@ -165,9 +197,9 @@ class chmlfrp_delete_usertunnel(wx.Panel):
             #获取当前用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             pass
     def usertunnel_list_表项被双击(self, event):
@@ -189,9 +221,9 @@ class chmlfrp_delete_usertunnel(wx.Panel):
             try:
                 for i in range(len(usertunnel_info)):
                     if str(usertunnel_info[i]['nodestate']) == "offline":
-                        self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                        self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                     if str(usertunnel_info[i]['nodestate']) == "online":
-                        self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                        self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
             except KeyError:
                 pass
             self.delete_usertunnel.Disable()
@@ -207,9 +239,9 @@ class chmlfrp_delete_usertunnel(wx.Panel):
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.usertunnel_list.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
@@ -222,7 +254,7 @@ class chmlfrp_create_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
         global unode
-        self.列表框1 = wx.ListBox(self, size=(1103, 261), pos=(27, 51), name='listBox', choices=[], style=32)
+        self.列表框1 = wx.ListBox(self, size=(1103, 261), pos=(27, 51), name='listBox', choices=[], style=1073741856)
         self.列表框1.Bind(wx.EVT_LISTBOX_DCLICK,self.列表框1_表项被双击)
         self.标签1 = wx.StaticText(self, size=(222, 24), pos=(27, 20),label='当前节点列表(双击选择创建的隧道节点):', name='staticText', style=17)
         self.标签2 = wx.StaticText(self, size=(80, 24), pos=(26, 339), label='隧道名称:', name='staticText',style=2321)
@@ -251,13 +283,13 @@ class chmlfrp_create_usertunnel(wx.Panel):
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                self.列表框1.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框1.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                self.列表框1.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框1.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                self.列表框1.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框1.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                self.列表框1.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框1.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
         self.usertunnel_ip.SetLabel("127.0.0.1")
     def 列表框1_表项被双击(self,event):
         self.create_usertunnel.Enable()
@@ -319,13 +351,13 @@ class chmlfrp_create_usertunnel(wx.Panel):
         try:
             for i in range(len(unode)):
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                    self.列表框1.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框1.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                    self.列表框1.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框1.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                    self.列表框1.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框1.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                    self.列表框1.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框1.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
         except Exception:
             flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
@@ -337,11 +369,11 @@ class chmlfrp_create_usertunnel(wx.Panel):
 class chmlfrp_revise_usertunnel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
-        self.列表框1 = wx.ListBox(self, size=(1090, 214), pos=(43, 46), name='listBox', choices=[], style=32)
+        self.列表框1 = wx.ListBox(self, size=(1090, 214), pos=(43, 46), name='listBox', choices=[], style=1073741856)
         self.列表框1.Bind(wx.EVT_LISTBOX_DCLICK, self.列表框1_表项被双击)
         self.标签1 = wx.StaticText(self,size=(248, 24),pos=(38, 16),label='请选择要修改的隧道(双击修改隧道):',name='staticText',style=17)
         self.标签2 = wx.StaticText(self,size=(780, 24),pos=(38, 269),label='请选择修改的节点:',name='staticText',style=17)
-        self.列表框2 = wx.ListBox(self, size=(1090, 214), pos=(43, 297), name='listBox', choices=[], style=32)
+        self.列表框2 = wx.ListBox(self, size=(1090, 214), pos=(43, 297), name='listBox', choices=[], style=1073741856)
         self.标签3 = wx.StaticText(self, size=(80, 24), pos=(43, 569), label='隧道内网ip:', name='staticText',style=2321)
         self.usertunnel_ip = wx.TextCtrl(self, size=(211, 22), pos=(125, 569), value='', name='text', style=0)
         self.标签4 = wx.StaticText(self, size=(80, 24), pos=(43, 609), label='隧道内网端口:',name='staticText', style=2321)
@@ -371,22 +403,22 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             #获取当前用户隧道
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             pass
         #获取节点列表
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                self.列表框2.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框2.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                self.列表框2.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框2.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                self.列表框2.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框2.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
         self.多选框3.Disable()
 
 
@@ -474,9 +506,9 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
                 if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']))
+                    self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:"+str(usertunnel_info[i]['localip'])+",当前隧道内网端口:"+str(usertunnel_info[i]['nport'])+",当前隧道外网端口:"+str(usertunnel_info[i]['dorp']))
         except KeyError:
             flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
@@ -486,18 +518,19 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             pass
 
     def 按钮3_按钮被单击(self,event):
+        #刷新节点
         self.列表框2.Clear()
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         try:
             for i in range(len(unode)):
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                    self.列表框2.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框2.Append(str(i + 1) + ".[国内节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                    self.列表框2.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框2.Append(str(i + 1) + ".[国内VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                    self.列表框2.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框2.Append(str(i + 1) + ".[国外节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                    self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']))
+                    self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
         except Exception:
             flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
@@ -505,6 +538,8 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
+
+
 #关于
 class chmlfrp_about(wx.Panel):
     def __init__(self, parent):
@@ -533,6 +568,7 @@ class SampleNotebook(wx.Frame):
         super(SampleNotebook, self).__init__(*args, **kw)
         self.InitUi()
     def InitUi(self):
+        self.SetWindowStyle(style=541072384)
         # 设置标题
         self.SetTitle("chmlfrp")
         # 设置窗口尺寸
