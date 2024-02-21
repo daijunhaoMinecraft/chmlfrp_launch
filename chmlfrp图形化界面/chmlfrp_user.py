@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import json
 import requests
 import wx
@@ -7,6 +8,9 @@ import pyperclip3 as pycopy
 import winreg
 import random
 import string
+import datetime
+import platform
+import psutil
 #忽略证书警告
 requests.packages.urllib3.disable_warnings()
 #获取当前路径
@@ -19,6 +23,10 @@ headers = {
 def Personal():
     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders')
     path = winreg.QueryValueEx(key, "Personal")[0]
+    return path
+def getcpu():
+    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'HARDWARE\DESCRIPTION\System\CentralProcessor\0')
+    path = winreg.QueryValueEx(key, "ProcessorNameString")[0]
     return path
 #获取登录信息
 chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={sys.argv[1]}",headers=headers,verify=False).text)
@@ -152,7 +160,7 @@ class chmlfrp_start_usertunnel(wx.Panel):
         with open(f"{pathx}\\frpc.ini",mode="w",encoding="utf-8") as f:
             f.write(usertunnel_info_config_frpc)
             f.close()
-        os.system(f"start {pathx}\\frpc.exe -u {sys.argv[1]} -p {usertunnel_info[self.usertunnel_list.GetSelection()]['id']}")
+        os.system(f"start cmd /c \"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024**3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&echo 隧道名称:{usertunnel_info[self.usertunnel_list.GetSelection()]['name']}&echo 隧道类型:{usertunnel_info[self.usertunnel_list.GetSelection()]['type']}&echo 内网IP:{usertunnel_info[self.usertunnel_list.GetSelection()]['localip']}&echo 内网端口:{usertunnel_info[self.usertunnel_list.GetSelection()]['nport']}&echo 外网端口/域名:{usertunnel_info[self.usertunnel_list.GetSelection()]['dorp']}&echo 节点:{usertunnel_info[self.usertunnel_list.GetSelection()]['node']}&echo 连接地址:{usertunnel_info[self.usertunnel_list.GetSelection()]['ip']}&echo.&echo ===========FRPC输出==============&{pathx}\\frpc.exe -u {sys.argv[1]} -p {usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&echo frpc已终止,按任意键退出&pause\"")
         user_usertunnel_OK = wx.MessageDialog(None, caption="info",message=f"已执行隧道启动命令,是否复制ip?",style=wx.YES_NO | wx.ICON_INFORMATION)
         if user_usertunnel_OK.ShowModal() == wx.ID_YES:
             pycopy.copy(usertunnel_info[self.usertunnel_list.GetSelection()]['ip'])
