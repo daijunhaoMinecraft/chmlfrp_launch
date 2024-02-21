@@ -5,6 +5,8 @@ import sys
 import os
 import pyperclip3 as pycopy
 import winreg
+import random
+import string
 #忽略证书警告
 requests.packages.urllib3.disable_warnings()
 #获取当前路径
@@ -263,9 +265,10 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.标签4 = wx.StaticText(self, size=(80, 24), pos=(26, 426), label='隧道内网端口:',name='staticText', style=2321)
         self.usertunnel_n_port = wx.TextCtrl(self, size=(291, 22), pos=(119, 427), value='', name='text',style=0)
         self.usertunnel_ip = wx.TextCtrl(self, size=(291, 22), pos=(119, 381), value='', name='text', style=0)
-        self.tcp_udp = wx.RadioBox(self, size=(136, 60), pos=(26, 460), label='隧道端口类型',choices=['tcp', 'udp'], majorDimension=0, name='radioBox', style=4)
-        self.标签5 = wx.StaticText(self, size=(80, 24), pos=(26, 544), label='隧道外网端口:',name='staticText', style=2321)
-        self.usertunnel_w_port = wx.TextCtrl(self, size=(291, 22), pos=(119, 544), value='', name='text',style=0)
+        self.chmlfrp_type = wx.RadioBox(self,size=(250, 60),pos=(26, 466),label='隧道端口类型',choices=['tcp', 'udp', 'http', 'https'],majorDimension=0,name='radioBox',style=4)
+        self.chmlfrp_type.Bind(wx.EVT_RADIOBOX,self.chmlfrp_type_选项被单击)
+        self.标签5 = wx.StaticText(self,size=(120, 24),pos=(26, 545),label='请输入外网端口:',name='staticText',style=2304)
+        self.usertunnel_w_port = wx.TextCtrl(self,size=(291, 22),pos=(155, 544),value='',name='text',style=0)
         self.encryption = wx.CheckBox(self, size=(80, 24), pos=(589, 336), name='check', label='数据加密',style=16384)
         self.标签8 = wx.StaticText(self, size=(80, 24), pos=(503, 339), label='高级设置:', name='staticText',style=2321)
         self.compression = wx.CheckBox(self, size=(80, 24), pos=(589, 364), name='check', label='数据压缩',style=16384)
@@ -279,6 +282,13 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.create_usertunnel.Disable()
         self.按钮2 = wx.Button(self, size=(80, 32), pos=(1050, 325), label='刷新节点', name='button')
         self.按钮2.Bind(wx.EVT_BUTTON, self.按钮2_按钮被单击)
+        self.Domain_name_query = wx.Button(self,size=(108, 32),pos=(456, 539),label='域名解析查询',name='button')
+        self.Domain_name_query.Hide()
+        self.Domain_name_query.Disable()
+        self.Domain_name_query.Bind(wx.EVT_BUTTON,self.Domain_name_query_按钮被单击)
+        self.标签10 = wx.StaticText(self, size=(322, 24), pos=(26, 587),label='tips:域名解析查询和创建隧道都需要选择节点才可以进行操作', name='staticText',style=2304)
+        self.random_name_usertunnel = wx.Button(self, size=(86, 32), pos=(418, 334), label='随机隧道名称',name='button')
+        self.random_name_usertunnel.Bind(wx.EVT_BUTTON, self.random_name_usertunnel_按钮被单击)
         #获取节点
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
@@ -293,6 +303,44 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.usertunnel_ip.SetLabel("127.0.0.1")
     def 列表框1_表项被双击(self,event):
         self.create_usertunnel.Enable()
+        self.Domain_name_query.Enable()
+
+    def random_name_usertunnel_按钮被单击(self,event):
+        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 30)))
+        self.usertunnel_name.SetLabel(random_str)
+
+    def Domain_name_query_按钮被单击(self,event):
+        Domain_name_query_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.列表框1.GetSelection()]['ip']}",headers=headers,verify=False).text)
+        if Domain_name_query_info['status'] == "success":
+            if Domain_name_query_info['hasSrvToFrpOne'] == False:
+                Domain_name_query_srv = "解析失败"
+            elif Domain_name_query_info['hasSrvToFrpOne'] == True:
+                Domain_name_query_srv = "解析成功"
+            if Domain_name_query_info['hasCnameToFrpOne'] == False:
+                Domain_name_query_cname = "解析失败"
+            elif Domain_name_query_info['hasCnameToFrpOne'] == True:
+                Domain_name_query_cname = "解析成功"
+            Domain_name_query_ok = wx.MessageDialog(None, caption="info", message=f"解析成功!\n当前节点对此域名进行Srv解析状态:{Domain_name_query_srv}\n当前节点对此域名进行cname解析状态:{Domain_name_query_cname}",style=wx.OK | wx.ICON_INFORMATION)
+            if Domain_name_query_ok.ShowModal() == wx.ID_OK:
+                pass
+        elif Domain_name_query_info['status'] == "error":
+            Domain_name_query_Error = wx.MessageDialog(None, caption="info",message=f"解析失败!\n{Domain_name_query_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if Domain_name_query_Error.ShowModal() == wx.ID_OK:
+                pass
+
+
+    def chmlfrp_type_选项被单击(self,event):
+        if self.chmlfrp_type.GetSelection() == 3:
+            self.标签5.SetLabel("请输入你的https域名:")
+            self.Domain_name_query.Show()
+
+        elif self.chmlfrp_type.GetSelection() == 2:
+            self.标签5.SetLabel("请输入你的http域名:")
+            self.Domain_name_query.Show()
+
+        elif self.chmlfrp_type.GetSelection() == 0 or self.chmlfrp_type.GetSelection() == 1:
+            self.标签5.SetLabel("请输入外网端口:")
+            self.Domain_name_query.Hide()
 
     def ap_内容被改变(self, event):
         self.encryption.SetValue(True)
@@ -307,27 +355,35 @@ class chmlfrp_create_usertunnel(wx.Panel):
             compression = "true"
         elif self.compression.GetValue() == False:
             compression = "false"
-        if self.tcp_udp.GetSelection() == 0:
-            usertunnel_type = "tcp"
-        elif self.tcp_udp.GetSelection() == 1:
-            usertunnel_type = "udp"
+        if self.chmlfrp_type.GetSelection() == 0:
+            chmlfrp_type = "tcp"
+        elif self.chmlfrp_type.GetSelection() == 1:
+            chmlfrp_type = "udp"
+        elif self.chmlfrp_type.GetSelection() == 2:
+            chmlfrp_type = "http"
+        elif self.chmlfrp_type.GetSelection() == 3:
+            chmlfrp_type = "https"
+        if self.chmlfrp_type.GetSelection() == 0 or self.chmlfrp_type.GetSelection() == 1:
+            chmlfrp_domainNameLabel = ""
+        elif self.chmlfrp_type.GetSelection() == 2 or self.chmlfrp_type.GetSelection() == 3:
+            chmlfrp_domainNameLabel = "自定义"
         try:
             #创建隧道请求内容
             data = {
-                "ap": f"{self.ap.GetValue()}",
-                "choose": "",
-                "compression": f"{compression}",
-                "domainNameLabel": "",
-                "dorp": int(self.usertunnel_w_port.GetValue()),
-                "encryption": f"{encryption}",
-                "localip": f"{self.usertunnel_ip.GetValue()}",
-                "name": f"{self.usertunnel_name.GetValue()}",
-                "node": f"{unode[self.列表框1.GetSelection()]['name']}",
-                "nport": f"{self.usertunnel_n_port.GetValue()}",
-                "token": f"{sys.argv[1]}",
-                "type": f"{usertunnel_type}",
-                "userid": int(chmlfrp_user_info["userid"])
-            }
+                      "token": f"{sys.argv[1]}",
+                      "userid": int(chmlfrp_user_info["userid"]),
+                      "localip": f"{self.usertunnel_ip.GetValue()}",
+                      "name": f"{self.usertunnel_name.GetValue()}",
+                      "node": f"{unode[self.列表框1.GetSelection()]['name']}",
+                      "type": f"{chmlfrp_type}",
+                      "nport": f"{self.usertunnel_n_port.GetValue()}",
+                      "dorp": f"{self.usertunnel_w_port.GetValue()}",
+                      "ap": f"{self.ap.GetValue()}",
+                      "domainNameLabel": f"{chmlfrp_domainNameLabel}",
+                      "choose": "",
+                      "encryption": f"{encryption}",
+                      "compression": f"{compression}"
+                    }
         except ValueError as e:
             user_create_Error = wx.MessageDialog(None, caption="Error", message=f"创建失败,原因可能出现在外网端口上,错误信息:{e}",style=wx.OK | wx.ICON_ERROR)
             if user_create_Error.ShowModal() == wx.ID_OK:
@@ -379,10 +435,11 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.标签4 = wx.StaticText(self, size=(80, 24), pos=(43, 609), label='隧道内网端口:',name='staticText', style=2321)
         self.usertunnel_n_port = wx.TextCtrl(self, size=(211, 22), pos=(125, 610), value='', name='text',style=0)
         self.标签5 = wx.StaticText(self, size=(80, 24), pos=(43, 653), label='隧道外网端口:',name='staticText', style=2321)
-        self.usertunnel_w_port = wx.TextCtrl(self, size=(211, 22), pos=(125, 654), value='', name='text',style=0)
+        self.usertunnel_w_port = wx.TextCtrl(self,size=(211, 22),pos=(142, 653),value='',name='text',style=0)
         self.标签6 = wx.StaticText(self, size=(80, 24), pos=(43, 532), label='隧道名称:', name='staticText',style=2321)
         self.usertunnel_name = wx.TextCtrl(self, size=(211, 22), pos=(125, 532), value='', name='text',style=0)
-        self.tcp_udp = wx.RadioBox(self, size=(136, 60), pos=(382, 532), label='端口类型',choices=['tcp', 'udp'], majorDimension=0, name='radioBox', style=4)
+        self.chmlfrp_type = wx.RadioBox(self,size=(250, 60),pos=(382, 616),label='端口类型',choices=['tcp', 'udp', 'http', 'https'],majorDimension=0,name='radioBox',style=4)
+        self.chmlfrp_type.Bind(wx.EVT_RADIOBOX,self.chmlfrp_type_选项被单击)
         self.标签7 = wx.StaticText(self, size=(80, 24), pos=(561, 532), label='高级设置:', name='staticText',style=2321)
         self.encryption = wx.CheckBox(self, size=(80, 24), pos=(654, 532), name='check', label='数据加密',style=16384)
         self.compression = wx.CheckBox(self, size=(80, 24), pos=(654, 566), name='check', label='数据压缩',style=16384)
@@ -396,7 +453,14 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.按钮2.Bind(wx.EVT_BUTTON,self.按钮2_按钮被单击)
         self.按钮3 = wx.Button(self, size=(80, 32), pos=(1048, 523), label='刷新隧道', name='button')
         self.按钮3.Bind(wx.EVT_BUTTON, self.按钮3_按钮被单击)
+        self.Domain_name_query = wx.Button(self, size=(91, 32), pos=(6, 682), label='域名解析查询',name='button')
+        self.Domain_name_query.Bind(wx.EVT_BUTTON, self.Domain_name_query_按钮被单击)
+        self.random_usertunnel = wx.Button(self, size=(104, 32), pos=(347, 528), label='随机隧道名称',name='button')
+        self.random_usertunnel.Bind(wx.EVT_BUTTON, self.random_usertunnel_按钮被单击)
+        self.标签9 = wx.StaticText(self, size=(346, 24), pos=(106, 689),label='tips:域名解析查询和修改隧道都需要选择你的隧道才可以进行操作',name='staticText', style=2304)
         self.列表框2.Disable()
+        self.Domain_name_query.Hide()
+        self.Domain_name_query.Disable()
         self.revise_usertunnel.Disable()
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         try:
@@ -421,13 +485,25 @@ class chmlfrp_revise_usertunnel(wx.Panel):
                 self.列表框2.Append(str(i + 1) + ".[国外VIP节点]节点名称:" + str(unode[i]['name']) + ",节点所在地:" + str(unode[i]['area']) + ",节点信息:" + str(unode[i]['notes']) + ",节点状态:" + str(unode[i]['state']) + ",udp支持:" + str(unode[i]['udp']) + ",建站支持:" + str(unode[i]['web']) + ",节点ip:" + str(unode[i]['ip']) + ",外网端口限制:" + str(unode[i]['rport']) + ",节点id:" + str(unode[i]['id']))
         self.多选框3.Disable()
 
+    def chmlfrp_type_选项被单击(self,event):
+        if self.chmlfrp_type.GetSelection() == 3:
+            self.标签5.SetLabel("你的https域名:")
+            self.Domain_name_query.Show()
 
+        elif self.chmlfrp_type.GetSelection() == 2:
+            self.标签5.SetLabel("你的http域名:")
+            self.Domain_name_query.Show()
+
+        elif self.chmlfrp_type.GetSelection() == 0 or self.chmlfrp_type.GetSelection() == 1:
+            self.标签5.SetLabel("隧道外网端口:")
+            self.Domain_name_query.Hide()
 
     def 列表框1_表项被双击(self,event):
         #获取用户选中的隧道信息
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         self.列表框2.Enable()
         self.多选框3.Enable()
+        self.Domain_name_query.Enable()
         self.revise_usertunnel.Enable()
         self.标签2.SetLabel(f"请选择修改的节点(当前节点为{usertunnel_info[self.列表框1.GetSelection()]['node']}):")
         self.usertunnel_name.SetLabel(f"{usertunnel_info[self.列表框1.GetSelection()]['name']}")
@@ -435,9 +511,13 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.usertunnel_n_port.SetLabel(f"{usertunnel_info[self.列表框1.GetSelection()]['nport']}")
         self.usertunnel_w_port.SetLabel(f"{str(usertunnel_info[self.列表框1.GetSelection()]['dorp'])}")
         if usertunnel_info[self.列表框1.GetSelection()]['type'] == "tcp":
-            self.tcp_udp.SetSelection(0)
-        if usertunnel_info[self.列表框1.GetSelection()]['type'] == "udp":
-            self.tcp_udp.SetSelection(1)
+            self.chmlfrp_type.SetSelection(0)
+        elif usertunnel_info[self.列表框1.GetSelection()]['type'] == "udp":
+            self.chmlfrp_type.SetSelection(1)
+        elif usertunnel_info[self.列表框1.GetSelection()]['type'] == "http":
+            self.chmlfrp_type.SetSelection(2)
+        elif usertunnel_info[self.列表框1.GetSelection()]['type'] == "https":
+            self.chmlfrp_type.SetSelection(3)
         if usertunnel_info[self.列表框1.GetSelection()]['encryption'] == "false":
             self.encryption.SetValue(False)
         if usertunnel_info[self.列表框1.GetSelection()]['encryption'] == "true":
@@ -447,8 +527,20 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         if usertunnel_info[self.列表框1.GetSelection()]['compression'] == "true":
             self.compression.SetValue(True)
         self.编辑框5.SetLabel(f"{str(usertunnel_info[self.列表框1.GetSelection()]['ap'])}")
+        if self.chmlfrp_type.GetSelection() == 3:
+            self.标签5.SetLabel("你的https域名:")
+            self.Domain_name_query.Show()
+
+        elif self.chmlfrp_type.GetSelection() == 2:
+            self.标签5.SetLabel("你的http域名:")
+            self.Domain_name_query.Show()
+
+        elif self.chmlfrp_type.GetSelection() == 0 or self.chmlfrp_type.GetSelection() == 1:
+            self.标签5.SetLabel("隧道外网端口:")
+            self.Domain_name_query.Hide()
 
     def revise_usertunnel_按钮被单击(self, event):
+        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
         if self.encryption.GetValue() == True:
             encryption = "true"
@@ -458,29 +550,33 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             compression = "true"
         elif self.compression.GetValue() == False:
             compression = "false"
-        if self.tcp_udp.GetSelection() == 0:
-            chmlfrp_usertunnel_type = "tcp"
-        elif self.tcp_udp.GetSelection() == 1:
-            chmlfrp_usertunnel_type = "udp"
+        if self.chmlfrp_type.GetSelection() == 0:
+            chmlfrp_chmlfrp_type = "tcp"
+        elif self.chmlfrp_type.GetSelection() == 1:
+            chmlfrp_chmlfrp_type = "udp"
+        elif self.chmlfrp_type.GetSelection() == 2:
+            chmlfrp_chmlfrp_type = "http"
+        elif self.chmlfrp_type.GetSelection() == 3:
+            chmlfrp_chmlfrp_type = "https"
         if self.多选框3.GetValue() == True:
             node = usertunnel_info[self.列表框1.GetSelection()]['node']
         elif self.多选框3.GetValue() == False:
-            node = usertunnel_info[self.列表框2.GetSelection()]['node']
+            node = unode[self.列表框2.GetSelection()]['name']
         #修改隧道请求内容
         data1 = {
-            "ap": " ",
-            "compression": f"{compression}",
-            "dorp": f"{self.usertunnel_w_port.GetValue()}",
-            "encryption": f"{encryption}",
-            "localip": f"{self.usertunnel_ip.GetValue()}",
-            "name": f"{self.usertunnel_name.GetValue()}",
-            "node": f"{node}",
-            "nport": f"{self.usertunnel_n_port.GetValue()}",
-            "tunnelid": f"{str(usertunnel_info[self.列表框1.GetSelection()]['id'])}",
-            "type": f"{chmlfrp_usertunnel_type}",
-            "userid": int(chmlfrp_user_info["userid"]),
-            "usertoken": f"{sys.argv[1]}"
-        }
+                  "tunnelid": f"{str(usertunnel_info[self.列表框1.GetSelection()]['id'])}",
+                  "usertoken": F"{sys.argv[1]}",
+                  "userid": int(chmlfrp_user_info["userid"]),
+                  "localip": f"{self.usertunnel_ip.GetValue()}",
+                  "name": f"{self.usertunnel_name.GetValue()}",
+                  "node": f"{node}",
+                  "type": f"{chmlfrp_chmlfrp_type}",
+                  "nport": f"{self.usertunnel_n_port.GetValue()}",
+                  "dorp": f"{self.usertunnel_w_port.GetValue()}",
+                  "ap": f"{self.编辑框5.GetValue()}",
+                  "encryption": f"{encryption}",
+                  "compression": f"{compression}"
+                }
         #修改隧道请求头
         headers1 = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0',
@@ -493,6 +589,18 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         user_revise_info_message = wx.MessageDialog(None, caption="info", message=f"{revise_usertunnel_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_revise_info_message.ShowModal() == wx.ID_OK:
             pass
+        self.列表框1.Clear()
+        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
+        try:
+            for i in range(len(usertunnel_info)):
+                if str(usertunnel_info[i]['nodestate']) == "offline":
+                    self.列表框1.Append(str(i + 1) + ".[离线节点]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:" + str(usertunnel_info[i]['localip']) + ",当前隧道内网端口:" + str(usertunnel_info[i]['nport']) + ",当前隧道外网端口:" + str(usertunnel_info[i]['dorp']))
+                if str(usertunnel_info[i]['nodestate']) == "online":
+                    self.列表框1.Append(str(i + 1) + ".[正常隧道]隧道名称:" + str(usertunnel_info[i]['name']) + ",隧道节点:" + str(usertunnel_info[i]['node']) + ",隧道ID:" + str(usertunnel_info[i]['id']) + ",当前隧道节点状态:" + str(usertunnel_info[i]['nodestate']) + ",隧道IP:" + str(usertunnel_info[i]['ip']) + ",隧道类型:" + str(usertunnel_info[i]['type']) + ",当前隧道内网ip:" + str(usertunnel_info[i]['localip']) + ",当前隧道内网端口:" + str(usertunnel_info[i]['nport']) + ",当前隧道外网端口:" + str(usertunnel_info[i]['dorp']))
+        except KeyError:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
+                pass
 
     def 多选框3_狀态被改变(self, event):
         if self.多选框3.GetValue() == True:
@@ -538,6 +646,31 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
+
+    def Domain_name_query_按钮被单击(self,event):
+        Domain_name_query_info = json.loads(requests.get(
+            f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.列表框2.GetSelection()]['ip']}",
+            headers=headers, verify=False).text)
+        if Domain_name_query_info['status'] == "success":
+            if Domain_name_query_info['hasSrvToFrpOne'] == False:
+                Domain_name_query_srv = "解析失败"
+            elif Domain_name_query_info['hasSrvToFrpOne'] == True:
+                Domain_name_query_srv = "解析成功"
+            if Domain_name_query_info['hasCnameToFrpOne'] == False:
+                Domain_name_query_cname = "解析失败"
+            elif Domain_name_query_info['hasCnameToFrpOne'] == True:
+                Domain_name_query_cname = "解析成功"
+            Domain_name_query_ok = wx.MessageDialog(None, caption="info",message=f"解析成功!\n当前节点对此域名进行Srv解析状态:{Domain_name_query_srv}\n当前节点对此域名进行cname解析状态:{Domain_name_query_cname}",style=wx.OK | wx.ICON_INFORMATION)
+            if Domain_name_query_ok.ShowModal() == wx.ID_OK:
+                pass
+        elif Domain_name_query_info['status'] == "error":
+            Domain_name_query_Error = wx.MessageDialog(None, caption="info",message=f"解析失败!\n{Domain_name_query_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if Domain_name_query_Error.ShowModal() == wx.ID_OK:
+                pass
+
+    def random_usertunnel_按钮被单击(self,event):
+        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 30)))
+        self.usertunnel_name.SetLabel(random_str)
 
 
 #关于
