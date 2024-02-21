@@ -286,9 +286,12 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.Domain_name_query.Hide()
         self.Domain_name_query.Disable()
         self.Domain_name_query.Bind(wx.EVT_BUTTON,self.Domain_name_query_按钮被单击)
-        self.标签10 = wx.StaticText(self, size=(322, 24), pos=(26, 587),label='tips:域名解析查询和创建隧道都需要选择节点才可以进行操作', name='staticText',style=2304)
+        self.标签10 = wx.StaticText(self, size=(418, 24), pos=(26, 587),label='tips:域名解析查询和创建隧道还有随机外网端口都需要选择节点才可以进行操作', name='staticText',style=2304)
         self.random_name_usertunnel = wx.Button(self, size=(86, 32), pos=(418, 334), label='随机隧道名称',name='button')
         self.random_name_usertunnel.Bind(wx.EVT_BUTTON, self.random_name_usertunnel_按钮被单击)
+        self.random_w_port = wx.Button(self,size=(96, 32),pos=(350, 499),label='随机外网端口',name='button')
+        self.random_w_port.Bind(wx.EVT_BUTTON,self.random_w_port_按钮被单击)
+        self.random_w_port.Disable()
         #获取节点
         unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
         for i in range(len(unode)):
@@ -304,6 +307,11 @@ class chmlfrp_create_usertunnel(wx.Panel):
     def 列表框1_表项被双击(self,event):
         self.create_usertunnel.Enable()
         self.Domain_name_query.Enable()
+        self.random_w_port.Enable()
+
+    def random_w_port_按钮被单击(self,event):
+        unode_w_port = f"{unode[self.列表框1.GetSelection()]['rport']}".split("-")
+        self.usertunnel_w_port.SetLabel(str(random.randint(int(unode_w_port[0]), int(unode_w_port[1]))))
 
     def random_name_usertunnel_按钮被单击(self,event):
         random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 30)))
