@@ -1,7 +1,10 @@
 # -*- coding:utf-8 -*-
 import json
+import time
+
 import requests
 import wx
+from wx.html2 import WebView
 import sys
 import os
 import pyperclip3 as pycopy
@@ -20,6 +23,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
 }
 #获取当前计算机文档路径
+
 def Personal():
     key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders')
     path = winreg.QueryValueEx(key, "Personal")[0]
@@ -31,6 +35,9 @@ def getcpu():
 #获取登录信息
 chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={sys.argv[1]}",headers=headers,verify=False).text)
 #用户主界面
+
+
+
 class chmlfrp_user(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
@@ -83,6 +90,7 @@ class chmlfrp_user(wx.Panel):
         self.copy_token.Bind(wx.EVT_BUTTON, self.copy_token_按钮被单击)
         self.display_token = wx.CheckBox(self, size=(84, 24), pos=(838, 20), name='check', label='显示token',style=16384)
         self.display_token.Bind(wx.EVT_CHECKBOX, self.display_token_狀态被改变)
+        self.标签6 = wx.StaticText(self, size=(352, 24), pos=(819, 721), label='', name='staticText', style=0)
 
     #重置用户token
     def resusertoken_按钮被单击(self, event):
@@ -697,17 +705,31 @@ class chmlfrp_about(wx.Panel):
         标签1_字体 = wx.Font(9, 70, 90, 700, False, 'Microsoft YaHei UI', 28)
         self.标签1.SetFont(标签1_字体)
 
+class chmlfrp_docs_web(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
+        self.browser = wx.html2.WebView.New(self)
+        self.browser.LoadURL("https://docs.chcat.cn/docs")
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.browser, 1, wx.EXPAND, 10)
+        self.SetSizer(sizer)
+        self.SetSize((1200, 800))
+        self.Center()
+
+
 
 
 #选项卡创建
 class MyNotebook(wx.Notebook):
     def __init__(self, parent):
-        wx.Notebook.__init__(self, parent, id=wx.ID_ANY, style=wx.BK_DEFAULT)
+        wx.Notebook.__init__(self, parent, id=wx.ID_ANY, style=wx.BK_DEFAULT | wx.NB_FIXEDWIDTH | wx.NB_NOPAGETHEME)
         self.AddPage(chmlfrp_user(self), "用户主界面")
         self.AddPage(chmlfrp_start_usertunnel(self), "启动隧道")
         self.AddPage(chmlfrp_delete_usertunnel(self), "删除隧道")
         self.AddPage(chmlfrp_create_usertunnel(self), "创建隧道")
         self.AddPage(chmlfrp_revise_usertunnel(self), "修改隧道")
+        #chmlfrp帮助文档在IE浏览器下加载不出来,帮助文档默认为IE浏览器,所以取消
+        #self.AddPage(chmlfrp_docs_web(self), "帮助文档")
         self.AddPage(chmlfrp_about(self), "关于")
 
 
@@ -719,7 +741,10 @@ class SampleNotebook(wx.Frame):
     def InitUi(self):
         self.SetWindowStyle(style=541072384)
         # 设置标题
-        self.SetTitle("chmlfrp")
+        self.hitokoto()
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.hitokoto, self.timer)
+        self.timer.Start(10000)  # 10 seconds
         # 设置窗口尺寸
         self.SetSize(1200, 800)
         panel = wx.Panel(self)
@@ -731,6 +756,15 @@ class SampleNotebook(wx.Frame):
         self.Centre()
         icon = wx.Icon(fr'{pathx}\chmlfrp.ico')
         self.SetIcon(icon)
+    # 一言
+    def hitokoto(self, event=None):
+        try:
+            response = json.loads(requests.get('https://v1.hitokoto.cn/', headers=headers, verify=False).text)
+            hitokoto = response['hitokoto']
+            hitokoto_from = response['from']
+            self.SetTitle(f"chmlfrp客户端   {hitokoto}----{hitokoto_from}")
+        except Exception:
+            self.SetTitle("chmlfrp客户端")
 
 
 def main():
