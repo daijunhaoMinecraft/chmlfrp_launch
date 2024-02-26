@@ -1,7 +1,5 @@
 # -*- coding:utf-8 -*-
 import json
-import time
-
 import requests
 import wx
 from wx.html2 import WebView
@@ -14,10 +12,10 @@ import string
 import datetime
 import platform
 import psutil
+#获取当前path路径
+pathx = os.path.dirname(os.path.realpath(sys.argv[0]))
 #忽略证书警告
 requests.packages.urllib3.disable_warnings()
-#获取当前路径
-pathx = os.path.dirname(os.path.abspath(__file__))
 #请求头
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
@@ -50,7 +48,12 @@ class chmlfrp_user(wx.Panel):
             user_token_login_Error = wx.MessageDialog(None, caption="Error", message=f"{chmlfrp_user_info['error']}",style=wx.OK | wx.ICON_ERROR)
             if user_token_login_Error.ShowModal() == wx.ID_OK:
                 sys.exit()
-
+        if os.path.exists(f"{pathx}\\frpc.exe"):
+            pass
+        else:
+            frpc_file_Error = wx.MessageDialog(None, caption="Error",message=f"未检测到frpc文件,请检查你是否有被删除,如果有,请下载frpc文件到此文件夹目录下",style=wx.OK | wx.ICON_ERROR)
+            if frpc_file_Error.ShowModal() == wx.ID_OK:
+                sys.exit()
         self.标签1 = wx.StaticText(self,size=(80, 24),pos=(7, 25),label='用户名:',name='staticText',style=2321)
         self.chmlfrp_user = wx.TextCtrl(self,size=(285, 22),pos=(91, 22),value='',name='text',style=16)
         self.chmlfrp_user.SetLabel(f"{chmlfrp_user_info['username']}")
@@ -131,6 +134,7 @@ class chmlfrp_user(wx.Panel):
 #启动隧道
 class chmlfrp_start_usertunnel(wx.Panel):
     def __init__(self, parent):
+        global usertunnel_info
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY)
         self.usertunnel_list = wx.ListBox(self, size=(1113, 312), pos=(15, 41), name='listBox', choices=[],style=1073741856)
         self.usertunnel_list.Bind(wx.EVT_LISTBOX_DCLICK, self.usertunnel_list_表项被双击)
@@ -155,26 +159,36 @@ class chmlfrp_start_usertunnel(wx.Panel):
         except KeyError:
             pass
     def usertunnel_list_表项被双击(self, event):
-        #获取隧道配置
         global usertunnel_info_config_frpc
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
-        self.start_usertunnel.Enable()
-        usertunnel_info_config_frpc = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={sys.argv[1]}&node={usertunnel_info[self.usertunnel_list.GetSelection()]['node']}").text)['message']
-        self.frpc_config.SetLabel(usertunnel_info_config_frpc)
+        #获取隧道配置
+        user_chmlfrp_choose_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/tunnelinfo.php?id={usertunnel_info[self.usertunnel_list.GetSelection()]['id']}",headers=headers,verify=False).text)
+        if user_chmlfrp_choose_info['code'] == 404:
+            user_chmlfrp_choose_info_Error = wx.MessageDialog(None, caption="Error", message=f"{user_chmlfrp_choose_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if user_chmlfrp_choose_info_Error.ShowModal() == wx.ID_YES:
+                pass
+        else:
+            self.start_usertunnel.Enable()
+            usertunnel_info_config_frpc = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={sys.argv[1]}&node={user_chmlfrp_choose_info['name']}").text)['message']
+            self.frpc_config.SetLabel(usertunnel_info_config_frpc)
 
     def start_usertunnel_按钮被单击(self, event):
         #启动隧道
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
-        with open(f"{pathx}\\frpc.ini",mode="w",encoding="utf-8") as f:
-            f.write(usertunnel_info_config_frpc)
-            f.close()
-        os.system(f"start cmd /c \"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024**3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&echo 隧道名称:{usertunnel_info[self.usertunnel_list.GetSelection()]['name']}&echo 隧道类型:{usertunnel_info[self.usertunnel_list.GetSelection()]['type']}&echo 内网IP:{usertunnel_info[self.usertunnel_list.GetSelection()]['localip']}&echo 内网端口:{usertunnel_info[self.usertunnel_list.GetSelection()]['nport']}&echo 外网端口/域名:{usertunnel_info[self.usertunnel_list.GetSelection()]['dorp']}&echo 节点:{usertunnel_info[self.usertunnel_list.GetSelection()]['node']}&echo 连接地址:{usertunnel_info[self.usertunnel_list.GetSelection()]['ip']}&echo.&echo ===========FRPC输出==============&{pathx}\\frpc.exe -u {sys.argv[1]} -p {usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&echo frpc已终止,按任意键退出&pause\"")
-        user_usertunnel_OK = wx.MessageDialog(None, caption="info",message=f"已执行隧道启动命令,是否复制ip?",style=wx.YES_NO | wx.ICON_INFORMATION)
-        if user_usertunnel_OK.ShowModal() == wx.ID_YES:
-            pycopy.copy(usertunnel_info[self.usertunnel_list.GetSelection()]['ip'])
-            copy_ok = wx.MessageDialog(None, caption="info", message=f"ip复制完成",style=wx.OK | wx.ICON_INFORMATION)
-            if copy_ok.ShowModal() == wx.ID_OK:
+        user_chmlfrp_choose_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/tunnelinfo.php?id={usertunnel_info[self.usertunnel_list.GetSelection()]['id']}",headers=headers, verify=False).text)
+        if user_chmlfrp_choose_info['code'] == 404:
+            user_chmlfrp_choose_info_Error = wx.MessageDialog(None, caption="Error",message=f"{user_chmlfrp_choose_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if user_chmlfrp_choose_info_Error.ShowModal() == wx.ID_YES:
                 pass
+        else:
+            with open(f"{pathx}\\frpc.ini",mode="w",encoding="utf-8") as f:
+                f.write(usertunnel_info_config_frpc)
+                f.close()
+            os.system(f"start cmd /c \"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024**3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{user_chmlfrp_choose_info['tunnel_id']}&echo 隧道名称:{user_chmlfrp_choose_info['tunnel_name']}&echo 隧道类型:{user_chmlfrp_choose_info['tunnel_type']}&echo 内网IP:{user_chmlfrp_choose_info['tunnel_localip']}&echo 内网端口:{user_chmlfrp_choose_info['tunnel_nport']}&echo 外网端口/域名:{user_chmlfrp_choose_info['tunnel_dorp']}&echo 节点名称:{user_chmlfrp_choose_info['name']}&echo 连接地址:{user_chmlfrp_choose_info['iparea']}&echo.&echo ===========FRPC输出==============&{pathx}\\frpc.exe -u {sys.argv[1]} -p {usertunnel_info[self.usertunnel_list.GetSelection()]['id']}&echo frpc已终止,按任意键退出&pause\"")
+            user_usertunnel_OK = wx.MessageDialog(None, caption="info",message=f"已执行隧道启动命令,是否复制ip?",style=wx.YES_NO | wx.ICON_INFORMATION)
+            if user_usertunnel_OK.ShowModal() == wx.ID_YES:
+                pycopy.copy(user_chmlfrp_choose_info['iparea'])
+                copy_ok = wx.MessageDialog(None, caption="info", message=f"ip复制完成",style=wx.OK | wx.ICON_INFORMATION)
+                if copy_ok.ShowModal() == wx.ID_OK:
+                    pass
 
     def flushed_usertunnel_按钮被单击(self, event):
         #刷新隧道
@@ -222,10 +236,17 @@ class chmlfrp_delete_usertunnel(wx.Panel):
             pass
     def usertunnel_list_表项被双击(self, event):
         #获取隧道配置
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={sys.argv[1]}", headers=headers,verify=False).text)
-        self.delete_usertunnel.Enable()
-        usertunnel_info_config_frpc = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={sys.argv[1]}&node={usertunnel_info[self.usertunnel_list.GetSelection()]['node']}").text)['message']
-        self.frpc_config.SetLabel(usertunnel_info_config_frpc)
+        user_chmlfrp_choose_info = json.loads(requests.get(
+            f"https://panel.chmlfrp.cn/api/tunnelinfo.php?id={usertunnel_info[self.usertunnel_list.GetSelection()]['id']}",
+            headers=headers, verify=False).text)
+        if user_chmlfrp_choose_info['code'] == 404:
+            user_chmlfrp_choose_info_Error = wx.MessageDialog(None, caption="Error",message=f"{user_chmlfrp_choose_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if user_chmlfrp_choose_info_Error.ShowModal() == wx.ID_YES:
+                pass
+        else:
+            self.delete_usertunnel.Enable()
+            usertunnel_info_config_frpc = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={sys.argv[1]}&node={user_chmlfrp_choose_info['name']}").text)['message']
+            self.frpc_config.SetLabel(usertunnel_info_config_frpc)
 
     def delete_usertunnel_按钮被单击(self, event):
         #删除隧道
@@ -734,7 +755,6 @@ class MyNotebook(wx.Notebook):
 
 
 class SampleNotebook(wx.Frame):
-
     def __init__(self, *args, **kw):
         super(SampleNotebook, self).__init__(*args, **kw)
         self.InitUi()

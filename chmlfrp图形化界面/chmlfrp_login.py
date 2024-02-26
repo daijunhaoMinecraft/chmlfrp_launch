@@ -5,11 +5,12 @@ import requests
 import wx
 import winreg
 import wx.adv
-
+import sys
 #关闭证书警告
 requests.packages.urllib3.disable_warnings()
 #获取当前路径
 pathx = os.path.dirname(os.path.abspath(__file__))
+pathx_pyinstaller = os.path.dirname(os.path.realpath(sys.argv[0]))
 #请求头
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0'
@@ -56,6 +57,18 @@ class Frame(wx.Frame):
         self.chmlfrp_token_show.Hide()
         self.chmlfrp_token.Disable()
         self.chmlfrp_token_show.Disable()
+        if os.path.exists(f"{pathx_pyinstaller}\\frpc.exe"):
+            pass
+        else:
+            frpc_file_Error = wx.MessageDialog(None, caption="Error",message=f"未检测到frpc文件,请检查你是否有被删除,如果有,请下载frpc文件到此文件夹目录下",style=wx.OK | wx.ICON_ERROR)
+            if frpc_file_Error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        if os.path.exists(f"{pathx_pyinstaller}\\chmlfrp_user.exe"):
+            pass
+        else:
+            frpc_file_Error = wx.MessageDialog(None, caption="Error",message=f"未检测到chmlfrp_user文件,请检查你是否有被删除,如果有,请重新下载",style=wx.OK | wx.ICON_ERROR)
+            if frpc_file_Error.ShowModal() == wx.ID_OK:
+                sys.exit()
 
 
         #读取账号密码(或token)如果没有,则跳过
@@ -91,7 +104,7 @@ class Frame(wx.Frame):
                         }
                         f.write(json.dumps(data, indent=4, ensure_ascii=False))
                         f.close()
-                    os.system(f"start {pathx}\\chmlfrp_user.exe {user_password_info['token']}")
+                    os.system(f"start {pathx_pyinstaller}\\chmlfrp_user.exe {user_password_info['token']}")
                     self.Destroy()
             except KeyError:
                 user_password_login_Error = wx.MessageDialog(None, caption="Error", message=f"{user_password_info['error']}",style=wx.OK | wx.ICON_ERROR)
@@ -110,7 +123,7 @@ class Frame(wx.Frame):
                         }
                         f.write(json.dumps(data, indent=4, ensure_ascii=False))
                         f.close()
-                    os.system(f"start {pathx}\\chmlfrp_user.exe {self.chmlfrp_token.GetValue()}")
+                    os.system(f"start {pathx_pyinstaller}\\chmlfrp_user.exe {self.chmlfrp_token.GetValue()}")
                     self.Destroy()
             except KeyError:
                 user_token_login_Error = wx.MessageDialog(None, caption="Error",message=f"{user_token_info['error']}",style=wx.OK | wx.ICON_ERROR)
