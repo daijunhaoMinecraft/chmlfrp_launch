@@ -12,6 +12,7 @@ import string
 import datetime
 import platform
 import psutil
+from io import BytesIO
 pathx_pyinstaller = os.path.dirname(os.path.realpath(sys.argv[0]))
 #获取当前path路径
 pathx = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -66,19 +67,14 @@ class chmlfrp_user(wx.Panel):
         self.标签3 = wx.StaticText(self,size=(80, 24),pos=(9, 97),label='用户QQ号:',name='staticText',style=2321)
         self.chmlfrp_user_img = wx.StaticBitmap(self,size=(40, 40),pos=(1097, 28),name='staticBitmap',style=33554432)
         #获取用户头像
-        chmlfrp_user_img = requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content
-        with open(f"{pathx}\\temp.png",mode="wb") as f:
-            f.write(chmlfrp_user_img)
-            f.close()
-        chmlfrp_user_icon_图片 = wx.Image(f"{pathx}\\temp.png").ConvertToBitmap()
-        self.chmlfrp_user_img.SetBitmap(wx.BitmapFromImage(chmlfrp_user_icon_图片))
+        self.chmlfrp_user_img.SetBitmap(wx.Image(BytesIO(requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content)).ConvertToBitmap())
         #获取签到状态
         qd = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/qdxx.php?userid={chmlfrp_user_info['userid']}",verify=False,headers=headers).text)
         if qd['is_signed_in_today'] == True:
             qd_info = f"今天已经签到了\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
         if qd['is_signed_in_today'] == False:
             qd_info = f"今天还未签到\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
-        self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户创建隧道的数量:{chmlfrp_user_info["tunnel"]}\n当前用户宽带限制(国内):{chmlfrp_user_info["bandwidth"]}\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n当前用户积分数:{str(chmlfrp_user_info["integral"])}\n{qd_info}',name='text',style=1073741872)
+        self.chmlfrp_info = wx.TextCtrl(self,size=(366, 249),pos=(7, 151),value=f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户隧道数量:{chmlfrp_user_info["tunnelstate"]} / {chmlfrp_user_info["tunnel"]}\n当前用户宽带限制:国内:{chmlfrp_user_info["bandwidth"]}Mbps | 国外:{str(int(chmlfrp_user_info["bandwidth"]) * 4)}M\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n当前用户积分数:{str(chmlfrp_user_info["integral"])}\n{qd_info}',name='text',style=1073741872)
         self.标签4 = wx.StaticText(self,size=(191, 24),pos=(7, 414),label='userinfo返回json(小白请无视):',name='staticText',style=17)
         self.debug_json_user_info = wx.TextCtrl(self,size=(366, 201),pos=(7, 447),value=f'{chmlfrp_user_info}',name='text',style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_AUTO_URL)
         self.resusertoken = wx.Button(self, size=(80, 32), pos=(7, 664), label='重置token', name='button')
@@ -364,7 +360,7 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.usertunnel_w_port.SetLabel(str(random.randint(int(unode_w_port[0]), int(unode_w_port[1]))))
 
     def random_name_usertunnel_按钮被单击(self,event):
-        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 25)))
+        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 15)))
         self.usertunnel_name.SetLabel(random_str)
 
     def Domain_name_query_按钮被单击(self,event):
@@ -462,6 +458,28 @@ class chmlfrp_create_usertunnel(wx.Panel):
             pass
 
     def 按钮2_按钮被单击(self, event):
+        self.超级列表框1.ClearAll()
+        self.create_usertunnel.Disable()
+        self.Domain_name_query.Disable()
+        self.random_w_port.Disable()
+        self.超级列表框1.AppendColumn('节点序号', 0, 111)
+        self.超级列表框1.AppendColumn('节点名称', 0, 128)
+        self.超级列表框1.AppendColumn('节点所在地', 0, 127)
+        self.超级列表框1.AppendColumn('节点信息', 0, 159)
+        self.超级列表框1.AppendColumn('节点id', 0, 92)
+        self.超级列表框1.AppendColumn('节点ip', 0, 149)
+        self.超级列表框1.AppendColumn('节点token', 0, 146)
+        self.超级列表框1.AppendColumn('节点apitoken', 0, 165)
+        self.超级列表框1.AppendColumn('节点端口', 0, 118)
+        self.超级列表框1.AppendColumn('节点端口限制', 0, 166)
+        self.超级列表框1.AppendColumn('节点状态', 0, 107)
+        self.超级列表框1.AppendColumn('创建节点索要的最低权限', 0, 164)
+        self.超级列表框1.AppendColumn('建站支持', 0, 99)
+        self.超级列表框1.AppendColumn('节点是否在中国', 0, 113)
+        self.超级列表框1.AppendColumn('http端口', 0, 95)
+        self.超级列表框1.AppendColumn('https端口', 0, 84)
+        self.超级列表框1.AppendColumn('节点有防/无防', 0, 97)
+        self.超级列表框1.AppendColumn('udp支持', 0, 68)
         try:
             unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
             for i in range(len(unode)):
@@ -817,15 +835,15 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         try:
             for i in range(len(unode)):
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                    self.超级列表框2.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[国内VIP节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                    self.超级列表框2.Append([f'{str(i + 1)}.[国内VIP节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[海外节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                    self.超级列表框2.Append([f'{str(i + 1)}.[海外节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
                 if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-        except Exception:
-            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
+                    self.超级列表框2.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+        except Exception as e:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{e}",style=wx.OK | wx.ICON_ERROR)
             if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
                 pass
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
@@ -853,7 +871,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
                 pass
 
     def random_usertunnel_按钮被单击(self,event):
-        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 30)))
+        random_str = ''.join(random.sample(string.ascii_letters + string.digits, random.randint(10, 15)))
         self.usertunnel_name.SetLabel(random_str)
 
 
