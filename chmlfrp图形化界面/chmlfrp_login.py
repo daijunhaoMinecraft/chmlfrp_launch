@@ -4,6 +4,7 @@ from Taowa_skin import *
 #皮肤加载
 皮肤_加载(皮肤.Areo)
 
+#uqdate 1.6
 from wx.html2 import WebView
 import pyperclip3 as pycopy
 import random
