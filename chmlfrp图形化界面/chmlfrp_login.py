@@ -16,10 +16,13 @@ import wx
 import winreg
 import wx.adv
 import sys
+from collections import OrderedDict
 from io import BytesIO
 from PIL import Image
 
-
+#重连次数
+requests.adapters.DEFAULT_RETRIES = 5
+#获取当前执行exe的路径
 pathx_pyinstaller = os.path.dirname(os.path.realpath(sys.argv[0]))
 #获取当前path路径
 pathx = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -40,6 +43,67 @@ def getcpu():
     path = winreg.QueryValueEx(key, "ProcessorNameString")[0]
     return path
 
+class realname(wx.Dialog):
+    def __init__(self, parent):
+        super().__init__(parent, title='实名认证', size=(400, 300),name='frame',style=541072384)
+        self.启动窗口 = wx_StaticText(self)
+        self.Centre()
+        self.标签1 = wx_StaticTextL(self.启动窗口,size=(80, 24),pos=(10, 77),label='姓名:',name='staticText',style=0)
+        self.标签2 = wx_StaticTextL(self.启动窗口,size=(80, 24),pos=(10, 114),label='身份证号码:',name='staticText',style=1)
+        self.标签3 = wx_StaticTextL(self.启动窗口,size=(374, 39),pos=(5, 5),label='官网警告：一旦实名成功则无法更改实名。认证接口对接阿里云二要素\n实名API。我们允许未成年实名，但请不要使用非本人身份证实名。',name='staticText',style=1)
+        self.标签3.SetForegroundColour((255, 0, 0, 255))
+        self.user = wx_TextCtrl(self.启动窗口, size=(269, 22), pos=(97, 79), value='', name='text', style=0)
+        self.idcard = wx_TextCtrl(self.启动窗口, size=(269, 22), pos=(97, 116), value='', name='text', style=0)
+        self.start_realname = wx_Button(self.启动窗口,size=(80, 32),pos=(10, 209),label='确认实名',name='button')
+        self.start_realname.Bind(wx.EVT_BUTTON,self.start_realname_按钮被单击)
+        self.ShowModal()
+        self.Destroy()
+
+
+    def start_realname_按钮被单击(self,event):
+        resusertoken_warm = wx.MessageDialog(None, caption="警告", message="你确定要实名认证吗?\n一旦实名成功则无法更改实名",style=wx.YES_NO | wx.ICON_WARNING)
+        if resusertoken_warm.ShowModal() == wx.ID_YES:
+            params = OrderedDict([("name", (None, f'{self.user.GetValue()}')),
+                                  ("idcard", (None, f'{self.idcard.GetValue()}')),
+                                  ("usertoken", (None, f'{user_token_acces}')),
+                                  ("userid", (None, f'{chmlfrp_user_info["userid"]}'))
+                                  ])
+            try:
+                realname_chmlfrp_get = json.loads(requests.post('https://panel.chmlfrp.cn/api/realname.php', files=params,verify=False, headers=headers).text)
+            except requests.exceptions.ProxyError:
+                message_error = wx.MessageDialog(None, caption="Error",message="用户实名认证post失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.ConnectionError:
+                message_error = wx.MessageDialog(None, caption="Error",message="用户实名认证post失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.Timeout:
+                message_error = wx.MessageDialog(None, caption="Error", message="用户实名认证post失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.RequestException as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"用户实名认证post失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except Exception as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"用户实名认证post失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            if realname_chmlfrp_get['status'] == "success":
+                realname_info = wx.MessageDialog(None, caption="info",message=f"{realname_chmlfrp_get['message']}",style=wx.OK | wx.ICON_INFORMATION)
+                if realname_info.ShowModal() == wx.ID_OK:
+                    self.Destroy()
+            elif realname_chmlfrp_get['status'] == "error":
+                realname_error = wx.MessageDialog(None, caption="Error", message=f"{realname_chmlfrp_get['message']}",style=wx.OK | wx.ICON_ERROR)
+                if realname_error.ShowModal() == wx.ID_OK:
+                    pass
+
 
 class chmlfrp_user(wx.Panel):
     def __init__(self, parent):
@@ -59,15 +123,41 @@ class chmlfrp_user(wx.Panel):
         self.resusertoken.SetForegroundColour((255, 0, 0, 255))
         self.resusertoken.Bind(wx.EVT_BUTTON,self.resusertoken_按钮被单击)
         self.标签5 = wx_StaticTextL(self,size=(106, 24),pos=(405, 22),label='当前登录用户token:',name='staticText',style=0)
-        self.编辑框6 = wx_TextCtrl(self,size=(305, 22),pos=(521, 21),value='',name='text',style=wx.TE_PASSWORD | wx.TE_READONLY)
-        self.copy_token = wx_Button(self,size=(80, 32),pos=(931, 17),label='复制token',name='button')
+        self.编辑框6 = wx_TextCtrl(self,size=(305, 22),pos=(521, 24),value='',name='text',style=wx.TE_READONLY | wx.TE_PASSWORD)
+        self.copy_token = wx_Button(self,size=(80, 32),pos=(931, 20),label='复制token',name='button')
         self.copy_token.Bind(wx.EVT_BUTTON,self.copy_token_按钮被单击)
-        self.display_token = wx_CheckBox(self,size=(84, 24),pos=(838, 20),name='check',label='显示token',style=16384)
+        self.display_token = wx_CheckBox(self,size=(84, 24),pos=(838, 24),name='check',label='显示token',style=16384)
         self.display_token.Bind(wx.EVT_CHECKBOX,self.display_token_狀态被改变)
+        self.flushed_user = wx_Button(self, size=(80, 32), pos=(110, 664), label='刷新账户', name='button')
+        self.flushed_user.Bind(wx.EVT_BUTTON, self.flushed_user_按钮被单击)
+        self.realname = wx_Button(self,size=(80, 32),pos=(216, 664),label='实名认证',name='button')
+        self.realname.Bind(wx.EVT_BUTTON,self.realname_按钮被单击)
+
 
 
         # 获取登录信息
-        chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={user_token_acces}", headers=headers,verify=False).text)
+        try:
+            chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={user_token_acces}", headers=headers,verify=False).text)
+        except requests.exceptions.ProxyError:
+            login_message_error = wx.MessageDialog(None, caption="Error",message="登录失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.ConnectionError:
+            login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.Timeout:
+            login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.RequestException as e:
+            login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except Exception as e:
+            login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
         chmlfrp_user_info_dump = json.dumps(chmlfrp_user_info, indent=4, ensure_ascii=False)
         # 用户主界面
         try:
@@ -83,25 +173,115 @@ class chmlfrp_user(wx.Panel):
         self.chmlfrp_email.SetLabel(f"{chmlfrp_user_info['email']}")
         self.chmlfrp_qq.SetLabel(f"{chmlfrp_user_info['qq']}")
         #获取用户头像
-        self.chmlfrp_user_img.SetBitmap(wx.Image(BytesIO(requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content)).ConvertToBitmap())
+        try:
+            save_icon = BytesIO()
+            Image.open(BytesIO(requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content)).resize((40, 40), Image.LANCZOS).save(save_icon, 'png')
+            self.chmlfrp_user_img.SetBitmap(wx.Image(BytesIO(save_icon.getvalue())).ConvertToBitmap())
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求用户头像失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求用户头像失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求用户头像失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求用户头像失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
         #获取签到状态
-        qd = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/qdxx.php?userid={chmlfrp_user_info['userid']}",verify=False,headers=headers).text)
+        try:
+            qd = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/qdxx.php?userid={chmlfrp_user_info['userid']}",verify=False,headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求签到信息失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求签到信息失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求签到信息失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求签到信息失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求签到信息失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
         if qd['is_signed_in_today'] == True:
             qd_info = f"今天已经签到了\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
         if qd['is_signed_in_today'] == False:
             qd_info = f"今天还未签到\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
         self.chmlfrp_info.SetValue(f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户隧道数量:{chmlfrp_user_info["tunnelstate"]} / {chmlfrp_user_info["tunnel"]}\n当前用户宽带限制:国内:{chmlfrp_user_info["bandwidth"]}Mbps | 国外:{str(int(chmlfrp_user_info["bandwidth"]) * 4)}M\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n当前用户积分数:{str(chmlfrp_user_info["integral"])}\n{qd_info}')
-        self.编辑框6_show = wx.TextCtrl(self, size=(305, 22), pos=(521, 21), value='', name='text', style=wx.TE_READONLY)
+        #如果你想体验软件内实名认证,请删除掉下面的注释(保留代码)
+        """if chmlfrp_user_info["realname"] == "未实名":
+            self.realname.Enable()
+            message_warm = wx.MessageDialog(None, caption="警告", message=f"为了保障你的体验,建议你去实名认证此账户\n实名认证请注意上方的官网警告",style=wx.OK | wx.ICON_WARNING)
+            if message_warm.ShowModal() == wx.ID_OK:
+                pass
+        elif chmlfrp_user_info["realname"] == "已实名":
+            self.realname.Enable()"""
+        #如果你想体验软件内实名认证,请注释掉下面一行代码的内容
+        self.realname.Destroy()
+
+        self.编辑框6_show = wx.TextCtrl(self,size=(305, 22),pos=(521, 24), value='', name='text', style=wx.TE_READONLY)
         self.编辑框6.SetLabel(f"{user_token_acces}")
         self.编辑框6_show.SetLabel(f"{user_token_acces}")
         self.debug_json_user_info.SetValue(chmlfrp_user_info_dump)
         self.编辑框6_show.Hide()
+        if chmlfrp_user_info["realname"] == "未实名":
+            message_warm = wx.MessageDialog(None, caption="Error", message=f"检测到此账户没用实名认证\n请到官网认证(其实实名认证早就做了,藏在代码里,只不过莫些原因不能发出来)",style=wx.OK | wx.ICON_WARNING)
+            if message_warm.ShowModal() == wx.ID_OK:
+                pass
+
+    def realname_按钮被单击(self,event):
+        realname(self)
 
     #重置用户token
     def resusertoken_按钮被单击(self, event):
         resusertoken_warm = wx.MessageDialog(None, caption="警告", message="你确定要重置token吗?",style=wx.YES_NO | wx.ICON_WARNING)
         if resusertoken_warm.ShowModal() == wx.ID_YES:
-            resusertoken_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/resusertoken.php?usertoken={user_token_acces}",headers=headers,verify=False).text)
+            try:
+                resusertoken_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/resusertoken.php?usertoken={user_token_acces}",headers=headers,verify=False).text)
+            except requests.exceptions.ProxyError:
+                message_error = wx.MessageDialog(None, caption="Error",message="重置用户token失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.ConnectionError:
+                message_error = wx.MessageDialog(None, caption="Error", message="重置用户token失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.Timeout:
+                message_error = wx.MessageDialog(None, caption="Error", message="重置用户token失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.RequestException as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"重置用户token失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except Exception as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"重置用户token失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
             with open(f"{Personal()}\\chmlfrp_token.json", mode="w", encoding="utf-8") as f:
                 data = {
                     "token": f"{resusertoken_info['newToken']}"
@@ -132,6 +312,120 @@ class chmlfrp_user(wx.Panel):
         chmlfrp_token_copy_ok = wx.MessageDialog(None, caption="信息", message="token复制成功\n请不要随意发给任何人!",style=wx.OK | wx.ICON_INFORMATION)
         if chmlfrp_token_copy_ok.ShowModal() == wx.ID_OK:
             pass
+
+    def flushed_user_按钮被单击(self, event):
+        # 更新全局变量
+        global chmlfrp_user_info
+        # 获取登录信息
+        try:
+            chmlfrp_user_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={user_token_acces}", headers=headers,verify=False).text)
+        except requests.exceptions.ProxyError:
+            login_message_error = wx.MessageDialog(None, caption="Error",message="刷新登录失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            login_message_error = wx.MessageDialog(None, caption="Error", message="刷新登录失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            login_message_error = wx.MessageDialog(None, caption="Error", message="刷新登录失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            login_message_error = wx.MessageDialog(None, caption="Error", message=f"刷新登录失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            login_message_error = wx.MessageDialog(None, caption="Error", message=f"刷新登录失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if login_message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
+        chmlfrp_user_info_dump = json.dumps(chmlfrp_user_info, indent=4, ensure_ascii=False)
+        # 用户主界面
+        try:
+            if chmlfrp_user_info['username']:
+                pass
+        except KeyError:
+            user_token_login_Error = wx.MessageDialog(None, caption="Error", message=f"{chmlfrp_user_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if user_token_login_Error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        self.chmlfrp_user.SetLabel(f"{chmlfrp_user_info['username']}")
+        self.chmlfrp_email.SetLabel(f"{chmlfrp_user_info['email']}")
+        self.chmlfrp_qq.SetLabel(f"{chmlfrp_user_info['qq']}")
+        #获取用户头像
+        try:
+            self.chmlfrp_user_img.SetBitmap(wx.Image(BytesIO(requests.get(f"{chmlfrp_user_info['userimg']}",headers=headers,verify=False).content)).ConvertToBitmap())
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求用户头像失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求用户头像失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求用户头像失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求用户头像失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求用户头像失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
+        #获取签到状态
+        try:
+            qd = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/qdxx.php?userid={chmlfrp_user_info['userid']}",verify=False,headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求签到信息失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求签到信息失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求签到信息失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求签到信息失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求签到信息失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
+        if qd['is_signed_in_today'] == True:
+            qd_info = f"今天已经签到了\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
+        if qd['is_signed_in_today'] == False:
+            qd_info = f"今天还未签到\n累计签到次数:{qd['total_sign_ins']}次\n累计签到获得的积分:{qd['total_points']}分\n今天一共签到的人数:{qd['count_of_matching_records']}人\n你的上一次签到时间为:{qd['last_sign_in_time']}"
+        self.chmlfrp_info.SetValue(f'当前用户id:{str(chmlfrp_user_info["userid"])}\n当前用户组:{str(chmlfrp_user_info["usergroup"])}\n到期时间:{chmlfrp_user_info["term"]}\n当前用户隧道数量:{chmlfrp_user_info["tunnelstate"]} / {chmlfrp_user_info["tunnel"]}\n当前用户宽带限制:国内:{chmlfrp_user_info["bandwidth"]}Mbps | 国外:{str(int(chmlfrp_user_info["bandwidth"]) * 4)}M\n当前用户实名状态:{chmlfrp_user_info["realname"]}\n当前用户积分数:{str(chmlfrp_user_info["integral"])}\n{qd_info}')
+        self.编辑框6_show = wx.TextCtrl(self,size=(305, 22),pos=(521, 24), value='', name='text', style=wx.TE_READONLY)
+        self.编辑框6.SetLabel(f"{user_token_acces}")
+        self.编辑框6_show.SetLabel(f"{user_token_acces}")
+        self.debug_json_user_info.SetValue(chmlfrp_user_info_dump)
+        self.编辑框6_show.Hide()
+
 
 #启动隧道
 class chmlfrp_start_delete_usertunnel(wx.Panel):
@@ -178,9 +472,9 @@ class chmlfrp_start_delete_usertunnel(wx.Panel):
         self.按钮4.SetForegroundColour((255, 128, 64, 255))
         self.按钮4.Bind(wx.EVT_BUTTON, self.按钮4_按钮被单击)
         self.按钮4.Disable()
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}", headers=headers,verify=False).text)
         self.start_usertunnel.Disable()
         self.delete_usertunnel.Disable()
+        usertunnel_info = self.flushed_ok_def()
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
@@ -189,9 +483,37 @@ class chmlfrp_start_delete_usertunnel(wx.Panel):
                     self.usertunnel_list.Append([f'{str(i + 1)}.[正常隧道]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
         except KeyError:
             pass
+    def flushed_ok_def(self):
+        try:
+            return json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="刷新用户隧道失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="刷新用户隧道失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="刷新用户隧道失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"刷新用户隧道失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"刷新用户隧道失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
 
     def 按钮4_按钮被单击(self,event):
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.flushed_ok_def()
         with open(fr'C:\Users\{getpass.getuser()}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\chmlfrp-{usertunnel_info[self.usertunnel_list.GetFirstSelected()]["name"]}.bat',mode="w",encoding="ANSI") as f:
             f.write(f"start {pathx_pyinstaller}\\start_frpc.exe {user_token_acces} {str(self.usertunnel_list.GetFirstSelected())}")
         start_up_write_info = wx.MessageDialog(None, caption="info", message=f"自启动添加完成,若需要删除自启动请到启动项管理中删除",style=wx.OK | wx.ICON_INFORMATION)
@@ -199,21 +521,48 @@ class chmlfrp_start_delete_usertunnel(wx.Panel):
             pass
 
     def usertunnel_list_选中表项(self,event):
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.flushed_ok_def()
         try:
             frpc_config = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/frpconfig.php?usertoken={user_token_acces}&node={usertunnel_info[self.usertunnel_list.GetFirstSelected()]['node']}",verify=False,headers=headers).text)['message']
             self.编辑框2.SetLabel(frpc_config)
             self.delete_usertunnel.Enable()
             self.start_usertunnel.Enable()
             self.按钮4.Enable()
-        except Exception:
-            self.按钮4.Disable()
-            self.start_usertunnel.Disable()
-            self.delete_usertunnel.Disable()
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取隧道配置文件失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                self.按钮4.Disable()
+                self.start_usertunnel.Disable()
+                self.delete_usertunnel.Disable()
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取隧道配置文件失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                self.按钮4.Disable()
+                self.start_usertunnel.Disable()
+                self.delete_usertunnel.Disable()
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取隧道配置文件失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                self.按钮4.Disable()
+                self.start_usertunnel.Disable()
+                self.delete_usertunnel.Disable()
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取隧道配置文件失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                self.按钮4.Disable()
+                self.start_usertunnel.Disable()
+                self.delete_usertunnel.Disable()
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取隧道配置文件失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                self.按钮4.Disable()
+                self.start_usertunnel.Disable()
+                self.delete_usertunnel.Disable()
+
 
 
     def start_usertunnel_按钮被单击(self,event):
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.flushed_ok_def()
         os.system(f"start {pathx_pyinstaller}\\start_frpc.exe {user_token_acces} {str(usertunnel_info[self.usertunnel_list.GetFirstSelected()]['id'])}")
         user_usertunnel_OK = wx.MessageDialog(None, caption="info",message=f"已执行隧道启动命令,是否复制ip?",style=wx.YES_NO | wx.ICON_INFORMATION)
         if user_usertunnel_OK.ShowModal() == wx.ID_YES:
@@ -224,32 +573,42 @@ class chmlfrp_start_delete_usertunnel(wx.Panel):
 
 
     def delete_usertunnel_按钮被单击(self,event):
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.flushed_ok_def()
         delete_warm = wx.MessageDialog(None, caption="警告", message="你确定要删除此隧道吗?",style=wx.YES_NO | wx.ICON_WARNING)
         if delete_warm.ShowModal() == wx.ID_YES:
-            delete_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/deletetl.php?token={user_token_acces}&nodeid={usertunnel_info[self.usertunnel_list.GetFirstSelected()]['id']}&userid={str(chmlfrp_user_info['userid'])}",headers=headers,verify=False).text)
-            self.usertunnel_list.ClearAll()
+            try:
+                delete_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/deletetl.php?token={user_token_acces}&nodeid={usertunnel_info[self.usertunnel_list.GetFirstSelected()]['id']}&userid={str(chmlfrp_user_info['userid'])}",headers=headers,verify=False).text)
+            except requests.exceptions.ProxyError:
+                message_error = wx.MessageDialog(None, caption="Error",message="删除隧道失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.ConnectionError:
+                message_error = wx.MessageDialog(None, caption="Error", message="删除隧道失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.Timeout:
+                message_error = wx.MessageDialog(None, caption="Error", message="删除隧道失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.RequestException as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"删除隧道失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except Exception as e:
+                message_error = wx.MessageDialog(None, caption="Error", message=f"删除隧道失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+                if message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            self.usertunnel_list.DeleteAllItems()
             self.start_usertunnel.Disable()
             self.delete_usertunnel.Disable()
             self.按钮4.Disable()
             self.编辑框2.SetLabel("")
-            self.usertunnel_list.AppendColumn('隧道序号', 0, 183)
-            self.usertunnel_list.AppendColumn('隧道名称', 0, 117)
-            self.usertunnel_list.AppendColumn('隧道id', 0, 85)
-            self.usertunnel_list.AppendColumn('启动地址', 0, 155)
-            self.usertunnel_list.AppendColumn('上一次隧道启动时间', 0, 182)
-            self.usertunnel_list.AppendColumn('隧道节点', 0, 130)
-            self.usertunnel_list.AppendColumn('隧道内网ip', 0, 121)
-            self.usertunnel_list.AppendColumn('隧道内网端口', 0, 146)
-            self.usertunnel_list.AppendColumn('隧道类型', 0, 119)
-            self.usertunnel_list.AppendColumn('隧道外网端口/域名', 0, 127)
-            self.usertunnel_list.AppendColumn('隧道状态', 0, 94)
-            self.usertunnel_list.AppendColumn('节点状态', 0, 101)
-            self.usertunnel_list.AppendColumn('数据加密是否开启', 0, 113)
-            self.usertunnel_list.AppendColumn('数据压缩是否开启', 0, 117)
-            self.usertunnel_list.AppendColumn('隧道ap内容', 0, 138)
-            self.usertunnel_list.AppendColumn('使用客户端', 0, 145)
-            usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+            usertunnel_info = self.flushed_ok_def()
             try:
                 for i in range(len(usertunnel_info)):
                     if str(usertunnel_info[i]['nodestate']) == "offline":
@@ -264,28 +623,12 @@ class chmlfrp_start_delete_usertunnel(wx.Panel):
 
 
     def flushed_usertunnel_按钮被单击(self,event):
-        self.usertunnel_list.ClearAll()
+        self.usertunnel_list.DeleteAllItems()
         self.start_usertunnel.Disable()
         self.delete_usertunnel.Disable()
         self.按钮4.Disable()
         self.编辑框2.SetLabel("")
-        self.usertunnel_list.AppendColumn('隧道序号', 0, 183)
-        self.usertunnel_list.AppendColumn('隧道名称', 0, 117)
-        self.usertunnel_list.AppendColumn('隧道id', 0, 85)
-        self.usertunnel_list.AppendColumn('启动地址', 0, 155)
-        self.usertunnel_list.AppendColumn('上一次隧道启动时间', 0, 182)
-        self.usertunnel_list.AppendColumn('隧道节点', 0, 130)
-        self.usertunnel_list.AppendColumn('隧道内网ip', 0, 121)
-        self.usertunnel_list.AppendColumn('隧道内网端口', 0, 146)
-        self.usertunnel_list.AppendColumn('隧道类型', 0, 119)
-        self.usertunnel_list.AppendColumn('隧道外网端口/域名', 0, 127)
-        self.usertunnel_list.AppendColumn('隧道状态', 0, 94)
-        self.usertunnel_list.AppendColumn('节点状态', 0, 101)
-        self.usertunnel_list.AppendColumn('数据加密是否开启', 0, 113)
-        self.usertunnel_list.AppendColumn('数据压缩是否开启', 0, 117)
-        self.usertunnel_list.AppendColumn('隧道ap内容', 0, 138)
-        self.usertunnel_list.AppendColumn('使用客户端', 0, 145)
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.flushed_ok_def()
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
@@ -358,7 +701,34 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.超级列表框1.AppendColumn('udp支持', 0, 68)
         self.超级列表框1.Bind(wx.EVT_LIST_ITEM_SELECTED, self.超级列表框1_选中表项)
         #获取节点
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        try:
+            unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取节点失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
                 self.超级列表框1.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
@@ -369,13 +739,44 @@ class chmlfrp_create_usertunnel(wx.Panel):
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
                 self.超级列表框1.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
         self.usertunnel_ip.SetLabel("127.0.0.1")
+
+    def get_unode_def(self):
+        try:
+            return json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取节点失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
     def 超级列表框1_选中表项(self,event):
         self.create_usertunnel.Enable()
         self.Domain_name_query.Enable()
         self.random_w_port.Enable()
 
     def random_w_port_按钮被单击(self,event):
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        # 获取节点
+        unode = self.get_unode_def()
         unode_w_port = f"{unode[self.超级列表框1.GetFirstSelected()]['rport']}".split("-")
         self.usertunnel_w_port.SetLabel(str(random.randint(int(unode_w_port[0]), int(unode_w_port[1]))))
 
@@ -384,8 +785,36 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.usertunnel_name.SetLabel(random_str)
 
     def Domain_name_query_按钮被单击(self,event):
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
-        Domain_name_query_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.超级列表框1.GetFirstSelected()]['ip']}",headers=headers,verify=False).text)
+        # 获取节点
+        unode = self.get_unode_def()
+        try:
+            Domain_name_query_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.超级列表框1.GetFirstSelected()]['ip']}",headers=headers,verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="域名解析查询失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="域名解析查询失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="域名解析查询失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"域名解析查询失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"域名解析查询失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
         if Domain_name_query_info['status'] == "success":
             if Domain_name_query_info['hasSrvToFrpOne'] == False:
                 Domain_name_query_srv = "解析失败"
@@ -422,7 +851,8 @@ class chmlfrp_create_usertunnel(wx.Panel):
         self.compression.SetValue(True)
 
     def create_usertunnel_按钮被单击(self, event):
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        # 获取节点
+        unode = self.get_unode_def()
         if self.encryption.GetValue() == True:
             encryption = "true"
         elif self.encryption.GetValue() == False:
@@ -471,37 +901,46 @@ class chmlfrp_create_usertunnel(wx.Panel):
             "HTTP_TOKEN": f"{user_token_acces}"
         }
         #创建隧道post请求
-        create_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/tunnel.php",json=data,headers=headers1,verify=False).text)
+        try:
+            create_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/tunnel.php",json=data,headers=headers1,verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="创建隧道失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="创建隧道失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="创建隧道失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"创建隧道失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"创建隧道失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
         #返回创建状态
         user_create_info_message = wx.MessageDialog(None, caption="info",message=f"{create_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_create_info_message.ShowModal() == wx.ID_OK:
             pass
 
     def 按钮2_按钮被单击(self, event):
-        self.超级列表框1.ClearAll()
+        self.超级列表框1.DeleteAllItems()
         self.create_usertunnel.Disable()
         self.Domain_name_query.Disable()
         self.random_w_port.Disable()
-        self.超级列表框1.AppendColumn('节点序号', 0, 111)
-        self.超级列表框1.AppendColumn('节点名称', 0, 128)
-        self.超级列表框1.AppendColumn('节点所在地', 0, 127)
-        self.超级列表框1.AppendColumn('节点信息', 0, 159)
-        self.超级列表框1.AppendColumn('节点id', 0, 92)
-        self.超级列表框1.AppendColumn('节点ip', 0, 149)
-        self.超级列表框1.AppendColumn('节点token', 0, 146)
-        self.超级列表框1.AppendColumn('节点apitoken', 0, 165)
-        self.超级列表框1.AppendColumn('节点端口', 0, 118)
-        self.超级列表框1.AppendColumn('节点端口限制', 0, 166)
-        self.超级列表框1.AppendColumn('节点状态', 0, 107)
-        self.超级列表框1.AppendColumn('创建节点索要的最低权限', 0, 164)
-        self.超级列表框1.AppendColumn('建站支持', 0, 99)
-        self.超级列表框1.AppendColumn('节点是否在中国', 0, 113)
-        self.超级列表框1.AppendColumn('http端口', 0, 95)
-        self.超级列表框1.AppendColumn('https端口', 0, 84)
-        self.超级列表框1.AppendColumn('节点有防/无防', 0, 97)
-        self.超级列表框1.AppendColumn('udp支持', 0, 68)
         try:
-            unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+            unode = self.get_unode_def()
             for i in range(len(unode)):
                 if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
                     self.超级列表框1.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
@@ -594,7 +1033,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         self.Domain_name_query.Disable()
         self.revise_usertunnel.Disable()
         self.多选框3.Disable()
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        usertunnel_info = self.get_usertunnel_info_def()
         try:
             for i in range(len(usertunnel_info)):
                 if str(usertunnel_info[i]['nodestate']) == "offline":
@@ -604,7 +1043,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
         except KeyError:
             pass
         #获取节点列表
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        unode = self.get_unode_def()
         for i in range(len(unode)):
             if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
                 self.超级列表框2.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
@@ -615,6 +1054,98 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
                 self.超级列表框2.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
 
+    def get_usertunnel_info_def(self):
+        try:
+            return json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="刷新用户隧道失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="刷新用户隧道失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="刷新用户隧道失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"刷新用户隧道失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"刷新用户隧道失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+
+    def get_unode_def(self):
+        try:
+            return json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取节点失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取节点失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+    def flushed_usertunnel_def(self):
+        self.超级列表框1.DeleteAllItems()
+        self.多选框3.Disable()
+        self.超级列表框2.Disable()
+        self.revise_usertunnel.Disable()
+        usertunnel_info = self.get_usertunnel_info_def()
+        try:
+            for i in range(len(usertunnel_info)):
+                if str(usertunnel_info[i]['nodestate']) == "offline":
+                    self.超级列表框1.Append([f'{str(i + 1)}.[离线节点]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
+                if str(usertunnel_info[i]['nodestate']) == "online":
+                    self.超级列表框1.Append([f'{str(i + 1)}.[正常隧道]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
+        except KeyError:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
+            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
+                pass
+    def flushed_unode_def(self):
+        self.超级列表框2.DeleteAllItems()
+        self.标签2.SetLabel("请选择修改的节点")
+        #获取节点
+        unode = self.get_unode_def()
+        try:
+            for i in range(len(unode)):
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
+                    self.超级列表框2.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
+                    self.超级列表框2.Append([f'{str(i + 1)}.[国内VIP节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
+                    self.超级列表框2.Append([f'{str(i + 1)}.[海外节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
+                    self.超级列表框2.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
+        except Exception:
+            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
+            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
+                pass
     def chmlfrp_type_选项被单击(self,event):
         if self.chmlfrp_type.GetSelection() == 3:
             self.标签5.SetLabel("你的https域名:")
@@ -630,7 +1161,7 @@ class chmlfrp_revise_usertunnel(wx.Panel):
 
     def 超级列表框1_选中表项(self, event):
         #获取用户选中的隧道信息
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}", headers=headers,verify=False).text)
+        usertunnel_info = self.get_usertunnel_info_def()
         self.超级列表框2.Enable()
         self.多选框3.Enable()
         self.Domain_name_query.Enable()
@@ -670,8 +1201,8 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             self.Domain_name_query.Hide()
 
     def revise_usertunnel_按钮被单击(self, event):
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}", headers=headers,verify=False).text)
+        unode = self.get_unode_def()
+        usertunnel_info = self.get_usertunnel_info_def()
         if self.encryption.GetValue() == True:
             encryption = "true"
         elif self.encryption.GetValue() == False:
@@ -716,78 +1247,39 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             "HTTP_TOKEN": f"{user_token_acces}"
         }
         #修改隧道请求post
-        revise_usertunnel_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/cztunnel.php",headers=headers1,json=data1,verify=False).text)
+        try:
+            revise_usertunnel_info = json.loads(requests.post("https://panel.chmlfrp.cn/api/cztunnel.php",headers=headers1,json=data1,verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="修改隧道失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="修改隧道失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="修改隧道失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"修改隧道失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"修改隧道失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
         #返回状态
         user_revise_info_message = wx.MessageDialog(None, caption="info", message=f"{revise_usertunnel_info['error']}",style=wx.OK | wx.ICON_INFORMATION)
         if user_revise_info_message.ShowModal() == wx.ID_OK:
             pass
-        self.超级列表框1.ClearAll()
-        self.多选框3.Disable()
-        self.超级列表框2.Disable()
-        self.revise_usertunnel.Disable()
-        self.超级列表框1.AppendColumn('隧道序号', 0, 115)
-        self.超级列表框1.AppendColumn('隧道名称', 0, 142)
-        self.超级列表框1.AppendColumn('隧道id', 0, 65)
-        self.超级列表框1.AppendColumn('启动地址', 0, 129)
-        self.超级列表框1.AppendColumn('上一次隧道启动时间', 0, 169)
-        self.超级列表框1.AppendColumn('隧道节点', 0, 102)
-        self.超级列表框1.AppendColumn('隧道内网ip', 0, 106)
-        self.超级列表框1.AppendColumn('隧道内网端口', 0, 126)
-        self.超级列表框1.AppendColumn('隧道类型', 0, 113)
-        self.超级列表框1.AppendColumn('隧道外网端口/域名', 0, 206)
-        self.超级列表框1.AppendColumn('隧道状态', 0, 108)
-        self.超级列表框1.AppendColumn('节点状态', 0, 112)
-        self.超级列表框1.AppendColumn('数据加密是否开启', 0, 140)
-        self.超级列表框1.AppendColumn('数据压缩是否开启', 0, 125)
-        self.超级列表框1.AppendColumn('隧道ap内容', 0, 118)
-        self.超级列表框1.AppendColumn('使用客户端', 0, 118)
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
-        try:
-            for i in range(len(usertunnel_info)):
-                if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[离线节点]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
-                if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[正常隧道]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
-        except KeyError:
-            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
-            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
-                pass
-        self.超级列表框2.ClearAll()
-        self.标签2.SetLabel("请选择修改的节点")
-        self.超级列表框2.AppendColumn('节点序号', 0, 128)
-        self.超级列表框2.AppendColumn('节点名称', 0, 148)
-        self.超级列表框2.AppendColumn('节点所在地', 0, 191)
-        self.超级列表框2.AppendColumn('节点信息', 0, 130)
-        self.超级列表框2.AppendColumn('节点id', 0, 94)
-        self.超级列表框2.AppendColumn('节点ip', 0, 132)
-        self.超级列表框2.AppendColumn('节点token', 0, 126)
-        self.超级列表框2.AppendColumn('节点apitoken', 0, 156)
-        self.超级列表框2.AppendColumn('节点端口', 0, 106)
-        self.超级列表框2.AppendColumn('节点端口限制', 0, 141)
-        self.超级列表框2.AppendColumn('节点状态', 0, 127)
-        self.超级列表框2.AppendColumn('创建节点索要的最低权限', 0, 185)
-        self.超级列表框2.AppendColumn('建站支持', 0, 102)
-        self.超级列表框2.AppendColumn('节点是否在中国', 0, 116)
-        self.超级列表框2.AppendColumn('http端口', 0, 92)
-        self.超级列表框2.AppendColumn('https端口', 0, 89)
-        self.超级列表框2.AppendColumn('节点有防/无防', 0, 105)
-        self.超级列表框2.AppendColumn('udp支持', 0, 71)
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
-        try:
-            for i in range(len(unode)):
-                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[国内VIP节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[海外节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-        except Exception:
-            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{unode}",style=wx.OK | wx.ICON_ERROR)
-            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
-                pass
-
+        self.flushed_usertunnel_def()
+        self.flushed_unode_def()
     def 多选框3_狀态被改变(self, event):
         if self.多选框3.GetValue() == True:
             self.超级列表框2.Disable()
@@ -795,84 +1287,74 @@ class chmlfrp_revise_usertunnel(wx.Panel):
             self.超级列表框2.Enable()
     def 按钮2_按钮被单击(self,event):
         #刷新隧道
-        self.超级列表框1.ClearAll()
-        self.超级列表框2.Disable()
-        self.多选框3.Disable()
-        self.revise_usertunnel.Disable()
-        self.超级列表框1.AppendColumn('隧道序号', 0, 115)
-        self.超级列表框1.AppendColumn('隧道名称', 0, 142)
-        self.超级列表框1.AppendColumn('隧道id', 0, 65)
-        self.超级列表框1.AppendColumn('启动地址', 0, 129)
-        self.超级列表框1.AppendColumn('上一次隧道启动时间', 0, 169)
-        self.超级列表框1.AppendColumn('隧道节点', 0, 102)
-        self.超级列表框1.AppendColumn('隧道内网ip', 0, 106)
-        self.超级列表框1.AppendColumn('隧道内网端口', 0, 126)
-        self.超级列表框1.AppendColumn('隧道类型', 0, 113)
-        self.超级列表框1.AppendColumn('隧道外网端口/域名', 0, 206)
-        self.超级列表框1.AppendColumn('隧道状态', 0, 108)
-        self.超级列表框1.AppendColumn('节点状态', 0, 112)
-        self.超级列表框1.AppendColumn('数据加密是否开启', 0, 140)
-        self.超级列表框1.AppendColumn('数据压缩是否开启', 0, 125)
-        self.超级列表框1.AppendColumn('隧道ap内容', 0, 118)
-        self.超级列表框1.AppendColumn('使用客户端', 0, 118)
-        usertunnel_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/usertunnel.php?token={user_token_acces}",headers=headers,verify=False).text)
-        try:
-            for i in range(len(usertunnel_info)):
-                if str(usertunnel_info[i]['nodestate']) == "offline":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[离线节点]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
-                if str(usertunnel_info[i]['nodestate']) == "online":
-                    self.超级列表框1.Append([f'{str(i + 1)}.[正常隧道]', f'{usertunnel_info[i]["name"]}', f'{usertunnel_info[i]["id"]}', f'{usertunnel_info[i]["ip"]}', f'{usertunnel_info[i]["uptime"]}', f'{usertunnel_info[i]["node"]}', f'{usertunnel_info[i]["localip"]}', f'{usertunnel_info[i]["nport"]}', f'{usertunnel_info[i]["type"]}',f'{usertunnel_info[i]["dorp"]}', f'{usertunnel_info[i]["state"]}', f'{usertunnel_info[i]["nodestate"]}', f'{usertunnel_info[i]["encryption"]}', f'{usertunnel_info[i]["compression"]}', f'{usertunnel_info[i]["ap"]}', f'{usertunnel_info[i]["client_version"]}'])
-        except KeyError:
-            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"{usertunnel_info['error']}",style=wx.OK | wx.ICON_ERROR)
-            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
-                pass
+        self.flushed_usertunnel_def()
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成", style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
 
     def 按钮3_按钮被单击(self,event):
         #刷新节点
-        self.超级列表框2.ClearAll()
-        self.超级列表框2.AppendColumn('节点序号', 0, 128)
-        self.超级列表框2.AppendColumn('节点名称', 0, 148)
-        self.超级列表框2.AppendColumn('节点所在地', 0, 191)
-        self.超级列表框2.AppendColumn('节点信息', 0, 130)
-        self.超级列表框2.AppendColumn('节点id', 0, 94)
-        self.超级列表框2.AppendColumn('节点ip', 0, 132)
-        self.超级列表框2.AppendColumn('节点token', 0, 126)
-        self.超级列表框2.AppendColumn('节点apitoken', 0, 156)
-        self.超级列表框2.AppendColumn('节点端口', 0, 106)
-        self.超级列表框2.AppendColumn('节点端口限制', 0, 141)
-        self.超级列表框2.AppendColumn('节点状态', 0, 127)
-        self.超级列表框2.AppendColumn('创建节点索要的最低权限', 0, 185)
-        self.超级列表框2.AppendColumn('建站支持', 0, 102)
-        self.超级列表框2.AppendColumn('节点是否在中国', 0, 116)
-        self.超级列表框2.AppendColumn('http端口', 0, 92)
-        self.超级列表框2.AppendColumn('https端口', 0, 89)
-        self.超级列表框2.AppendColumn('节点有防/无防', 0, 105)
-        self.超级列表框2.AppendColumn('udp支持', 0, 71)
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
-        try:
-            for i in range(len(unode)):
-                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[国内节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "yes" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[国内VIP节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "user":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[海外节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-                if unode[i]['china'] == "no" and unode[i]['nodegroup'] == "vip":
-                    self.超级列表框2.Append([f'{str(i + 1)}.[海外vip节点]', f'{str(unode[i]["name"])}', f'{str(unode[i]["area"])}', f'{str(unode[i]["notes"])}', f'{str(unode[i]["id"])}', f'{str(unode[i]["ip"])}', f'{str(unode[i]["nodetoken"])}', f'{str(unode[i]["apitoken"])}', f'{str(unode[i]["port"])}', f'{str(unode[i]["rport"])}', f'{str(unode[i]["state"])}', f'{str(unode[i]["nodegroup"])}', f'{str(unode[i]["web"])}', f'{str(unode[i]["china"])}', f'{str(unode[i]["http_port"])}', f'{str(unode[i]["https_port"])}', f'{str(unode[i]["fangyu"])}', f'{str(unode[i]["udp"])}'])
-        except Exception as e:
-            flushed_usertunnel_error = wx.MessageDialog(None, caption="info", message=f"出现错误:{e}",style=wx.OK | wx.ICON_ERROR)
-            if flushed_usertunnel_error.ShowModal() == wx.ID_OK:
-                pass
+        self.flushed_unode_def()
         flushed_usertunnel_ok = wx.MessageDialog(None, caption="info", message=f"刷新完成",style=wx.OK | wx.ICON_INFORMATION)
         if flushed_usertunnel_ok.ShowModal() == wx.ID_OK:
             pass
 
     def Domain_name_query_按钮被单击(self,event):
-        unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
-        Domain_name_query_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.列表框2.GetSelection()]['ip']}",headers=headers, verify=False).text)
+        #获取节点
+        try:
+            unode = json.loads(requests.get("https://panel.chmlfrp.cn/api/unode.php", verify=False, headers=headers).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="获取节点失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="获取节点失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"获取节点失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        try:
+            Domain_name_query_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/Domain_name_query.php?domain={self.usertunnel_w_port.GetValue()}&target_domain={unode[self.列表框2.GetSelection()]['ip']}",headers=headers, verify=False).text)
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="域名解析查询失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error",message="域名解析查询失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="域名解析查询失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"域名解析查询失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"域名解析查询失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                pass
+                return
         if Domain_name_query_info['status'] == "success":
             if Domain_name_query_info['hasSrvToFrpOne'] == False:
                 Domain_name_query_srv = "解析失败"
@@ -1056,11 +1538,29 @@ class SampleNotebook(wx.Frame):
         self.Layout()
         self.Centre()
         icon_bytes = BytesIO()
-        Image.open(BytesIO(requests.get("https://chmlfrp.cn/favicon.ico", headers=headers, verify=False).content)).resize((128, 128), Image.LANCZOS).save(icon_bytes, 'ico')
-        icon_ok = wx.Image(icon_bytes).ConvertToBitmap()
-        icon = wx.Icon(icon_ok)
-        self.SetIcon(icon)
-
+        try:
+            Image.open(BytesIO(requests.get("https://chmlfrp.cn/favicon.ico",headers=headers,verify=False).content)).resize((128, 128), Image.LANCZOS).save(icon_bytes, 'ico')
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求图标失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求图标失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求图标失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求图标失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求图标失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        self.SetIcon(wx.Icon(wx.Image(icon_bytes).ConvertToBitmap()))
 
     # 一言
     def hitokoto(self, event=None):
@@ -1095,9 +1595,11 @@ class Frame(wx.Frame):
         self.按钮1 = wx_Button(self.启动窗口,size=(80, 32),pos=(532, 390),label='登录',name='button')
         self.按钮1.Bind(wx.EVT_BUTTON,self.按钮1_按钮被单击)
         self.user_password = wx_RadioButton(self.启动窗口,size=(139, 24),pos=(722, 298),name='radioButton',label='使用账号密码登录')
+        self.user_password.Bind(wx.EVT_RADIOBUTTON, self.user_password_状态被改变)
         self.chmlfrp_token = wx_TextCtrl(self.启动窗口,size=(250, 22),pos=(464, 348),value='',name='text',style=wx.TE_PASSWORD)
         self.标签4 = wx_StaticTextL(self.启动窗口,size=(36, 24),pos=(423, 350),label='token:',name='staticText',style=257)
         self.user_token = wx_RadioButton(self.启动窗口,size=(117, 24),pos=(722, 348),name='radioButton',label='使用token登录')
+        self.user_token.Bind(wx.EVT_RADIOBUTTON, self.user_token_状态被改变)
         self.超级链接框1 = wx_adv_HyperlinkCtrl(self.启动窗口,size=(148, 22),pos=(18, 15),name='hyperlink',label='免费注册一个chmlfrp账号',url='panel.chmlfrp.cn/register',style=1)
         self.标签5 = wx_StaticTextL(self.启动窗口,size=(148, 22),pos=(18, 44),label='token指的是用户密钥',name='staticText',style=1)
         self.display_password = wx_CheckBox(self.启动窗口,size=(167, 24),pos=(872, 298),name='check',label='显示密码',style=16384)
@@ -1107,10 +1609,29 @@ class Frame(wx.Frame):
         self.chmlfrp_password_show = wx.TextCtrl(self.启动窗口, size=(250, 22), pos=(464, 298), value='', name='text',style=0)
         self.chmlfrp_token_show = wx.TextCtrl(self.启动窗口, size=(250, 22), pos=(464, 348), value='', name='text',style=0)
         icon_bytes = BytesIO()
-        Image.open(BytesIO(requests.get("https://chmlfrp.cn/favicon.ico",headers=headers,verify=False).content)).resize((128, 128), Image.LANCZOS).save(icon_bytes, 'ico')
-        icon_ok = wx.Image(icon_bytes).ConvertToBitmap()
-        icon = wx.Icon(icon_ok)
-        self.SetIcon(icon)
+        try:
+            Image.open(BytesIO(requests.get("https://chmlfrp.cn/favicon.ico",headers=headers,verify=False).content)).resize((128, 128), Image.LANCZOS).save(icon_bytes, 'ico')
+        except requests.exceptions.ProxyError:
+            message_error = wx.MessageDialog(None, caption="Error",message="请求图标失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.ConnectionError:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求图标失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.Timeout:
+            message_error = wx.MessageDialog(None, caption="Error", message="请求图标失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except requests.exceptions.RequestException as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求图标失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        except Exception as e:
+            message_error = wx.MessageDialog(None, caption="Error", message=f"请求图标失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+            if message_error.ShowModal() == wx.ID_OK:
+                sys.exit()
+        self.SetIcon(wx.Icon(wx.Image(icon_bytes).ConvertToBitmap()))
         self.user_password.SetValue(True)
         self.display_token.SetValue(False)
         self.display_password.SetValue(False)
@@ -1155,7 +1676,33 @@ class Frame(wx.Frame):
         if self.user_password.GetValue() == True:
             if self.display_password.GetValue() == True:
                 self.chmlfrp_password.SetLabel(self.chmlfrp_password_show.GetValue())
-            user_password_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/login.php?username={self.chmlfrp_user.GetValue()}&password={self.chmlfrp_password.GetValue()}",headers=headers,verify=False).text)
+            try:
+                user_password_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/login.php?username={self.chmlfrp_user.GetValue()}&password={self.chmlfrp_password.GetValue()}",headers=headers,verify=False).text)
+            except requests.exceptions.ProxyError:
+                login_message_error = wx.MessageDialog(None, caption="Error",message="登录失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.ConnectionError:
+                login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.Timeout:
+                login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.RequestException as e:
+                login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except Exception as e:
+                login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
             try:
                 if user_password_info['message'] == "登录成功":
                     with open(f"{Personal()}\\chmlfrp_user_password.json",mode="w",encoding="utf-8") as f:
@@ -1176,7 +1723,33 @@ class Frame(wx.Frame):
         elif self.user_token.GetValue() == True:
             if self.display_token.GetValue() == True:
                 self.chmlfrp_token.SetLabel(self.chmlfrp_token_show.GetValue())
-            user_token_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={self.chmlfrp_token.GetValue()}",headers=headers,verify=False).text)
+            try:
+                user_token_info = json.loads(requests.get(f"https://panel.chmlfrp.cn/api/userinfo.php?usertoken={self.chmlfrp_token.GetValue()}",headers=headers,verify=False).text)
+            except requests.exceptions.ProxyError:
+                login_message_error = wx.MessageDialog(None, caption="Error",message="登录失败,代理问题,请关闭代理后重试",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.ConnectionError:
+                login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,网络连接异常,请检查你的网络连接是否异常",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.Timeout:
+                login_message_error = wx.MessageDialog(None, caption="Error", message="登录失败,连接超时",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except requests.exceptions.RequestException as e:
+                login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,请求异常:{e}",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
+            except Exception as e:
+                login_message_error = wx.MessageDialog(None, caption="Error", message=f"登录失败,其他错误:{e}",style=wx.OK | wx.ICON_ERROR)
+                if login_message_error.ShowModal() == wx.ID_OK:
+                    pass
+                    return
             try:
                 if user_token_info['username']:
                     with open(f"{Personal()}\\chmlfrp_token.json",mode="w",encoding="utf-8") as f:

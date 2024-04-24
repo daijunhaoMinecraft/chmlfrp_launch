@@ -1,3 +1,4 @@
+# -*- coding:utf-8 -*-
 import sys
 import requests
 import json
@@ -7,6 +8,8 @@ import datetime
 import platform
 import psutil
 import winreg
+import subprocess
+import re
 token = sys.argv[1]
 id = sys.argv[2]
 #获取当前路径
@@ -30,5 +33,15 @@ try:
 except Exception as e:
     notification.notify(title='出现错误', message=f'{e}', app_icon=f"{pathx}\\system_Error.ico", timeout=10)
     sys.exit()
-os.system(f"start cmd /c \"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024**3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info['tunnel_id']}&echo 隧道名称:{usertunnel_info['tunnel_name']}&echo 隧道类型:{usertunnel_info['tunnel_type']}&echo 内网IP:{usertunnel_info['tunnel_localip']}&echo 内网端口:{usertunnel_info['tunnel_nport']}&echo 外网端口/域名:{usertunnel_info['tunnel_dorp']}&echo 节点名称:{usertunnel_info['name']}&echo 连接地址:{usertunnel_info['iparea']}&echo.&echo ===========FRPC输出==============&{pathx_pyinstaller}\\frpc.exe -u {token} -p {id}&echo frpc已终止,按任意键退出&pause\"")
+os.system(f"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo 已自动屏蔽token内容&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024**3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info['tunnel_id']}&echo 隧道名称:{usertunnel_info['tunnel_name']}&echo 隧道类型:{usertunnel_info['tunnel_type']}&echo 内网IP:{usertunnel_info['tunnel_localip']}&echo 内网端口:{usertunnel_info['tunnel_nport']}&echo 外网端口/域名:{usertunnel_info['tunnel_dorp']}&echo 节点名称:{usertunnel_info['name']}&echo 连接地址:{usertunnel_info['iparea']}&echo.&echo ===========FRPC输出==============")
+process = subprocess.Popen(f"{pathx_pyinstaller}\\frpc.exe -u {token} -p {id}", stdout=subprocess.PIPE, universal_newlines=True, encoding="utf-8")
+
+# 逐行读取输出并过滤掉包含指定关键词的行
+for line in process.stdout:
+    if token in line:
+        line = re.sub(rf'\[{token}-[\w]+\]', '\b', line)
+        line = line.replace(f"{token}.","")
+    print(line, end='')  # 输出处理后的行
+process.wait()
+os.system("echo frpc已终止,按任意键退出&pause")
 notification.notify(title = f"隧道正在启动--{usertunnel_info['tunnel_name']}",message = f"隧道ip地址:{usertunnel_info['iparea']}",app_icon = f"{pathx}\\system_info.ico",timeout = 10)
