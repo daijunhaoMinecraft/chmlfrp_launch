@@ -45,7 +45,7 @@ for line in process.stdout:
         line = line.replace(f"{token}.","")
         line = line.replace(f"{token}", "")
     if "映射启动成功" in line:
-        notification.notify(title=f"隧道启动成功--{usertunnel_info['tunnel_name']}",message=f"隧道ip地址:{usertunnel_info['iparea']}", app_icon=f"{pathx}\\system_Error.ico",timeout=message_time)
+        notification.notify(title=f"隧道启动成功--{usertunnel_info['tunnel_name']}",message=f"隧道ip地址:{usertunnel_info['iparea']}", app_icon=f"{pathx}\\system_info.ico",timeout=message_time)
     elif "启动失败: proxy" in line:
         notification.notify(title=f"隧道启动失败--{usertunnel_info['tunnel_name']}",message=f"隧道启动失败,原因:proxy(端口被占用)\n请检查你的隧道是否是运行状态", app_icon=f"{pathx}\\system_Error.ico",timeout=message_time)
     elif "无法连接至服务器" in line:
