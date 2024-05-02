@@ -117,7 +117,7 @@ class Frame(wx_Frame):
 
 
     def 按钮3_按钮被单击(self,event):
-        wildcard = "Text files (*.html)|*.html|Text files (*.log)|*.log|All files (*.*)|*.*"
+        wildcard = "Text files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*"
         dlg = wx.FileDialog(self, message="请选择一个文件夹用于保存日志",defaultFile=f"chmlfrp隧道启动日志-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log", wildcard=wildcard,style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         if dlg.ShowModal() == wx.ID_OK:
             with open(dlg.GetPath(),mode="w",encoding="utf-8") as f:
