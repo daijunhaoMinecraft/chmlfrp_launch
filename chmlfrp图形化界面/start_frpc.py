@@ -1,4 +1,6 @@
 # -*- coding:utf-8 -*-
+import time
+
 import wx
 from Taowa_wx import *
 from Taowa_skin import *
@@ -66,7 +68,12 @@ class Frame(wx_Frame):
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         subprocess.run(f"taskkill /PID {frpc_process_pid} /f", stdout=subprocess.PIPE, universal_newlines=True,startupinfo=startupinfo, encoding="gbk")
         self.Destroy()
-
+    def frpc_stop(self):
+        self.编辑框1.AppendText("frpc已终止!")
+        self.按钮1.Disable()
+        self.按钮4.Enable()
+        self.按钮5.Disable()
+        self.标签1.SetLabel("当前隧道运行状态(停止):")
     def start_frpc(self):
         global frpc_process_pid
         startupinfo = subprocess.STARTUPINFO()
@@ -84,32 +91,27 @@ class Frame(wx_Frame):
             if "映射启动成功" in line:
                 self.标签1.SetLabel("当前隧道运行状态(映射启动成功):")
                 notification.notify(title=f"隧道启动成功--{usertunnel_info['tunnel_name']}",message=f"隧道ip地址:{usertunnel_info['iparea']}",app_icon=f"{pathx}\\system_info.ico", timeout=message_time)
+                self.编辑框1.AppendText(f"[信息]当前隧道启动成功,连接地址: {usertunnel_info['iparea']}\n")
+                self.编辑框1.AppendText("")
             if "启动失败: proxy" in line:
                 self.标签1.SetLabel("当前隧道运行状态(启动失败:proxy):")
-                notification.notify(title=f"隧道启动失败--{usertunnel_info['tunnel_name']}",message=f"隧道启动失败,原因:proxy(端口被占用)\n请检查你的隧道是否是运行状态",app_icon=f"{pathx}\\system_Error.ico", timeout=message_time)
+                notification.notify(title=f"隧道启动失败--{usertunnel_info['tunnel_name']}",message=f"隧道启动失败,原因:proxy(端口被占用)\n请检查你的隧道是否是运行状态,frp日志:\n",app_icon=f"{pathx}\\system_Error.ico", timeout=message_time)
+                self.编辑框1.AppendText("[错误]当前隧道出现错误:proxy(端口被占用)\n请检查你的隧道是否是运行状态")
             if "无法连接至服务器" in line:
                 self.按钮1.Disable()
                 self.按钮4.Enable()
                 self.按钮5.Disable()
                 self.标签1.SetLabel("当前隧道运行状态(启动失败:无法连接至服务器):")
-                notification.notify(title=f"隧道启动失败--{usertunnel_info['tunnel_name']}",message=f"隧道启动失败,原因:无法连接至服务器\n请检查你的节点是否是在线状态,请检查你的网络\n实在不行就去换节点",app_icon=f"{pathx}\\system_Error.ico", timeout=message_time)
+                notification.notify(title=f"隧道启动失败--{usertunnel_info['tunnel_name']}",message=f"隧道启动失败,原因:无法连接至服务器\n请检查你的节点是否是在线状态,请检查你的网络\n实在不行就去换节点,frp报错:\n",app_icon=f"{pathx}\\system_Error.ico", timeout=message_time)
+                self.编辑框1.AppendText("[错误]当前隧道出现错误:无法连接至服务器\n请检查你的节点是否是在线状态,请检查你的网络是否连接\n实在不行就去换节点,frp日志:\n")
             self.编辑框1.AppendText(line.replace("",""))  # 输出处理后的行
         process.wait()
-        self.编辑框1.AppendText("frpc已终止!")
-        self.按钮1.Disable()
-        self.按钮4.Enable()
-        self.按钮5.Disable()
-        self.标签1.SetLabel("当前隧道运行状态(停止):")
+        threading.Thread(target=self.frpc_stop).start()
 
     def 按钮1_按钮被单击(self,event):
         taskkill_os_ok_warm = wx.MessageDialog(None, caption="警告",message=f"确定要停止隧道?",style=wx.YES_NO | wx.ICON_WARNING)
         if taskkill_os_ok_warm.ShowModal() == wx.ID_YES:
             taskkill_os_ok = os.popen(f"taskkill /PID {frpc_process_pid} /f").read()
-            self.编辑框1.AppendText(taskkill_os_ok)
-            self.按钮1.Disable()
-            self.按钮4.Enable()
-            self.按钮5.Disable()
-            self.标签1.SetLabel("当前隧道运行状态(停止):")
             notification.notify(title=f"隧道已停止--{usertunnel_info['tunnel_name']}",message=f"{taskkill_os_ok}", app_icon=f"{pathx}\\system_info.ico",timeout=message_time)
             taskkill_os_ok_info = wx.MessageDialog(None, caption="info",message=f"当前停止隧道命令执行状态:\n{taskkill_os_ok}",style=wx.OK | wx.ICON_INFORMATION)
             if taskkill_os_ok_info.ShowModal() == wx.ID_OK:
@@ -139,13 +141,11 @@ class Frame(wx_Frame):
     def 按钮5_按钮被单击(self,event):
         reset_frpc_info = wx.MessageDialog(None, caption="警告",message=f"确定要重启隧道?",style=wx.YES_NO | wx.ICON_WARNING)
         if reset_frpc_info.ShowModal() == wx.ID_YES:
-            subprocess.run(f"taskkill /PID {frpc_process_pid} /f", stdout=subprocess.PIPE, universal_newlines=True,encoding="gbk")
-            self.编辑框1.SetLabel("")
             self.标签1.SetLabel("当前隧道运行状态:")
+            self.按钮4.Disable()
             notification.notify(title=f"隧道正在启动--{usertunnel_info['tunnel_name']}",message=f"隧道ip地址:{usertunnel_info['iparea']}", app_icon=f"{pathx}\\system_info.ico",timeout=message_time)
             self.编辑框1.AppendText(os.popen(f"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo 已自动屏蔽token内容&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024 ** 3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info['tunnel_id']}&echo 隧道名称:{usertunnel_info['tunnel_name']}&echo 隧道类型:{usertunnel_info['tunnel_type']}&echo 内网IP:{usertunnel_info['tunnel_localip']}&echo 内网端口:{usertunnel_info['tunnel_nport']}&echo 外网端口/域名:{usertunnel_info['tunnel_dorp']}&echo 节点名称:{usertunnel_info['name']}&echo 连接地址:{usertunnel_info['iparea']}&echo.&echo ===========FRPC输出==============").read().encode("utf-8"))
             threading.Thread(target=self.start_frpc).start()
-            self.按钮4.Disable()
 
 class myApp(wx.App):
     def  OnInit(self):
