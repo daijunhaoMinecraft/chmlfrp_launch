@@ -142,6 +142,7 @@ class Frame(wx_Frame):
         reset_frpc_info = wx.MessageDialog(None, caption="警告",message=f"确定要重启隧道?",style=wx.YES_NO | wx.ICON_WARNING)
         if reset_frpc_info.ShowModal() == wx.ID_YES:
             self.标签1.SetLabel("当前隧道运行状态:")
+            self.编辑框1.SetLabel("")
             self.按钮4.Disable()
             notification.notify(title=f"隧道正在启动--{usertunnel_info['tunnel_name']}",message=f"隧道ip地址:{usertunnel_info['iparea']}", app_icon=f"{pathx}\\system_info.ico",timeout=message_time)
             self.编辑框1.AppendText(os.popen(f"@echo off&echo ChmlFrp日志信息 - {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}生成&echo 已自动屏蔽token内容&echo.&echo ===========设备信息==============&echo.&echo 系统/系统版本:{platform.platform()}&echo 操作系统位数:{platform.architecture()[0]}&echo 处理器信息:{getcpu()}&echo 机带RAM:{round(psutil.virtual_memory().total / (1024 ** 3))}GB&echo.&echo ===========隧道信息==============&echo.&echo 隧道ID:{usertunnel_info['tunnel_id']}&echo 隧道名称:{usertunnel_info['tunnel_name']}&echo 隧道类型:{usertunnel_info['tunnel_type']}&echo 内网IP:{usertunnel_info['tunnel_localip']}&echo 内网端口:{usertunnel_info['tunnel_nport']}&echo 外网端口/域名:{usertunnel_info['tunnel_dorp']}&echo 节点名称:{usertunnel_info['name']}&echo 连接地址:{usertunnel_info['iparea']}&echo.&echo ===========FRPC输出==============").read().encode("utf-8"))
